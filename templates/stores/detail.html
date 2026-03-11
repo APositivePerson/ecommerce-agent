@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block page_title %}店铺详情{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div><i class="bi bi-shop"></i> 店铺信息</div>
+                <div>
+                    <a href="{{ url_for('store_edit', store_id=store.id) }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-pencil"></i> 编辑
+                    </a>
+                    <a href="{{ url_for('stores') }}" class="btn btn-sm btn-secondary">
+                        <i class="bi bi-arrow-left"></i> 返回
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="120">店铺名称</th>
+                                <td>{{ store.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>平台</th>
+                                <td>
+                                    {% if store.platform == 'wechat' %}
+                                        <span class="badge bg-success">微信小店</span>
+                                    {% elif store.platform == 'taobao' %}
+                                        <span class="badge bg-warning">淘宝</span>
+                                    {% elif store.platform == 'jd' %}
+                                        <span class="badge bg-danger">京东</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ store.platform }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>店铺类型</th>
+                                <td>{{ store.store_type or '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>状态</th>
+                                <td>
+                                    {% if store.status == 'active' %}
+                                        <span class="badge bg-success">营业中</span>
+                                    {% elif store.status == 'inactive' %}
+                                        <span class="badge bg-secondary">已停业</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">已暂停</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>商品数量</th>
+                                <td>{{ store.product_count }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="120">品牌名称</th>
+                                <td>{{ store.brand_name or '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>联系人</th>
+                                <td>{{ store.contact_name or '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>联系电话</th>
+                                <td>{{ store.contact_phone or '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>邮箱</th>
+                                <td>{{ store.contact_email or '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>创建时间</th>
+                                <td>{{ store.created_at.strftime('%Y-%m-%d') if store.created_at else '-' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                {% if store.description %}
+                <div class="mt-3">
+                    <strong>店铺描述：</strong>
+                    <p class="text-muted">{{ store.description }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- 健康度卡片 -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-heart-pulse"></i> 店铺健康度
+            </div>
+            <div class="card-body text-center">
+                <h1 class="mb-0 {% if store.health_score >= 90 %}text-success{% elif store.health_score >= 70 %}text-warning{% else %}text-danger{% endif %}">
+                    {{ store.health_score }}
+                </h1>
+                <p class="text-muted">健康评分</p>
+            </div>
+        </div>
+
+        <!-- 合规状态卡片 -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-shield-check"></i> 合规状态
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>合规状态</span>
+                    {% if store.is_compliant %}
+                        <span class="badge bg-success">合规</span>
+                    {% else %}
+                        <span class="badge bg-danger">违规</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>违规次数</span>
+                    <span class="badge bg-warning">{{ store.violation_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>违规积分</span>
+                    <span>{{ store.violation_points }}</span>
+                </div>
+                <hr>
+                <a href="{{ url_for('store_violations', store_id=store.id) }}" class="btn btn-sm btn-outline-primary w-100">
+                    <i class="bi bi-list"></i> 查看违规记录
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

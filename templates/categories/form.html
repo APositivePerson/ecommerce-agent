@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ '编辑分类' if category else '新建分类' }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-tags"></i> {{ '编辑分类' if category else '新建分类' }}
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">分类名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               value="{{ category.name if category else '' }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="parent_id" class="form-label">父分类</label>
+                        <select class="form-select" id="parent_id" name="parent_id">
+                            <option value="">顶级分类</option>
+                            {% for parent in parent_categories %}
+                            <option value="{{ parent.id }}" {{ 'selected' if category and category.parent_id == parent.id else '' }}>
+                                {{ parent.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="level" class="form-label">层级</label>
+                        <input type="number" class="form-control" id="level" name="level"
+                               value="{{ category.level if category else '1' }}" min="1" max="3">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="sort_order" class="form-label">排序</label>
+                        <input type="number" class="form-control" id="sort_order" name="sort_order"
+                               value="{{ category.sort_order if category else '0' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="icon" class="form-label">图标</label>
+                <input type="text" class="form-control" id="icon" name="icon"
+                       value="{{ category.icon if category else '' }}" placeholder="Bootstrap Icons类名，如 bi-star">
+            </div>
+
+            <div class="mb-3">
+                <label for="description" class="form-label">分类描述</label>
+                <textarea class="form-control" id="description" name="description" rows="2">{{ category.description if category else '' }}</textarea>
+            </div>
+
+            {% if category %}
+            <div class="mb-3">
+                <label for="status" class="form-label">状态</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="active" {{ 'selected' if category and category.status == 'active' else '' }}>启用</option>
+                    <option value="inactive" {{ 'selected' if category and category.status == 'inactive' else '' }}>禁用</option>
+                </select>
+            </div>
+            {% endif %}
+
+            <hr>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> 保存
+                </button>
+                <a href="{{ url_for('categories') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-lg"></i> 取消
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

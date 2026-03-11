@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block page_title %}用户列表{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-people"></i> 用户列表
+            <span class="badge bg-secondary ms-2">{{ pagination.total }}</span>
+        </div>
+        <div>
+            <a href="{{ url_for('user_new') }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus"></i> 新建用户
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- 搜索栏 -->
+        <form method="GET" class="mb-4">
+            <div class="row g-2">
+                <div class="col-md-10">
+                    <input type="text" class="form-control" name="search"
+                           placeholder="搜索用户名、姓名、手机号或邮箱..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- 用户表格 -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>用户名</th>
+                        <th>姓名</th>
+                        <th>手机号</th>
+                        <th>邮箱</th>
+                        <th>角色</th>
+                        <th>所属店铺</th>
+                        <th>状态</th>
+                        <th>最后登录</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in pagination.items %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.real_name or '-' }}</td>
+                        <td>{{ user.phone or '-' }}</td>
+                        <td>{{ user.email or '-' }}</td>
+                        <td>
+                            {% if user.role %}
+                                <span class="badge bg-info">{{ user.role.name }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.store.name if user.store else '-' }}</td>
+                        <td>
+                            {% if user.status == 'active' %}
+                                <span class="badge bg-success">正常</span>
+                            {% elif user.status == 'inactive' %}
+                                <span class="badge bg-secondary">禁用</span>
+                            {% else %}
+                                <span class="badge bg-danger">锁定</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.last_login_at %}
+                                {{ user.last_login_at.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('user_detail', user_id=user.id) }}" class="btn btn-sm btn-outline-primary table-action-btn">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ url_for('user_edit', user_id=user.id) }}" class="btn btn-sm btn-outline-success table-action-btn">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <button onclick="confirmDelete({{ user.id }})" class="btn btn-sm btn-outline-danger table-action-btn">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4 text-muted">
+                            暂无用户数据
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        {% if pagination.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('users', page=pagination.prev_num, search=search) }}">上一页</a>
+                    </li>
+                {% endif %}
+
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == pagination.page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('users', page=page_num, search=search) }}">{{ page_num }}</a>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('users', page=pagination.next_num, search=search) }}">下一页</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">确认删除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                确定要删除此用户吗？此操作不可恢复。
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">确认删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(userId) {
+    document.getElementById('deleteForm').action = '/users/' + userId + '/delete';
+    var modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

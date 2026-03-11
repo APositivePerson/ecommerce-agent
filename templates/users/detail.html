@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block page_title %}用户详情{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div><i class="bi bi-person"></i> 用户详情</div>
+        <div>
+            <a href="{{ url_for('user_edit', user_id=user.id) }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            <a href="{{ url_for('users') }}" class="btn btn-sm btn-secondary">
+                <i class="bi bi-arrow-left"></i> 返回
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-borderless">
+                    <tr>
+                        <th width="120">用户名</th>
+                        <td>{{ user.username }}</td>
+                    </tr>
+                    <tr>
+                        <th>真实姓名</th>
+                        <td>{{ user.real_name or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>手机号</th>
+                        <td>{{ user.phone or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>邮箱</th>
+                        <td>{{ user.email or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>状态</th>
+                        <td>
+                            {% if user.status == 'active' %}
+                                <span class="badge bg-success">正常</span>
+                            {% elif user.status == 'inactive' %}
+                                <span class="badge bg-secondary">禁用</span>
+                            {% else %}
+                                <span class="badge bg-danger">锁定</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-borderless">
+                    <tr>
+                        <th width="120">角色</th>
+                        <td>{{ user.role.name if user.role else '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>所属店铺</th>
+                        <td>{{ user.store.name if user.store else '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>最后登录</th>
+                        <td>{{ user.last_login_at.strftime('%Y-%m-%d %H:%M') if user.last_login_at else '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>最后登录IP</th>
+                        <td>{{ user.last_login_ip or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>创建时间</th>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '-' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

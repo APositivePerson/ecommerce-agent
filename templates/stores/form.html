@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ '编辑店铺' if store else '新建店铺' }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-shop"></i> {{ '编辑店铺' if store else '新建店铺' }}
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <!-- 店铺基本信息 -->
+            <h6 class="text-muted mb-3">基本信息</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">店铺名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               value="{{ store.name if store else '' }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="platform" class="form-label">平台</label>
+                        <select class="form-select" id="platform" name="platform">
+                            <option value="wechat" {{ 'selected' if store and store.platform == 'wechat' else '' }}>微信小店</option>
+                            <option value="taobao" {{ 'selected' if store and store.platform == 'taobao' else '' }}>淘宝</option>
+                            <option value="jd" {{ 'selected' if store and store.platform == 'jd' else '' }}>京东</option>
+                            <option value="pinduoduo" {{ 'selected' if store and store.platform == 'pinduoduo' else '' }}>拼多多</option>
+                            <option value="other" {{ 'selected' if store and store.platform == 'other' else '' }}>其他</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="store_type" class="form-label">店铺类型</label>
+                        <input type="text" class="form-control" id="store_type" name="store_type"
+                               value="{{ store.store_type if store else '' }}" placeholder="如：旗舰店、专营店">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">状态</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="active" {{ 'selected' if store and store.status == 'active' else '' }}>营业中</option>
+                            <option value="inactive" {{ 'selected' if store and store.status == 'inactive' else '' }}>已停业</option>
+                            <option value="suspended" {{ 'selected' if store and store.status == 'suspended' else '' }}>已暂停</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="description" class="form-label">店铺描述</label>
+                <textarea class="form-control" id="description" name="description" rows="3">{{ store.description if store else '' }}</textarea>
+            </div>
+
+            <hr>
+            <!-- 联系信息 -->
+            <h6 class="text-muted mb-3">联系信息</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="contact_name" class="form-label">联系人</label>
+                        <input type="text" class="form-control" id="contact_name" name="contact_name"
+                               value="{{ store.contact_name if store else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="contact_phone" class="form-label">联系电话</label>
+                        <input type="text" class="form-control" id="contact_phone" name="contact_phone"
+                               value="{{ store.contact_phone if store else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="contact_email" class="form-label">邮箱</label>
+                        <input type="email" class="form-control" id="contact_email" name="contact_email"
+                               value="{{ store.contact_email if store else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+            <!-- 品牌信息 -->
+            <h6 class="text-muted mb-3">品牌信息</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="brand_name" class="form-label">品牌名称</label>
+                        <input type="text" class="form-control" id="brand_name" name="brand_name"
+                               value="{{ store.brand_name if store else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="brand_logo" class="form-label">品牌Logo URL</label>
+                        <input type="url" class="form-control" id="brand_logo" name="brand_logo"
+                               value="{{ store.brand_logo if store else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="brand_description" class="form-label">品牌描述</label>
+                <textarea class="form-control" id="brand_description" name="brand_description" rows="2">{{ store.brand_description if store else '' }}</textarea>
+            </div>
+
+            <hr>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> 保存
+                </button>
+                <a href="{{ url_for('stores') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-lg"></i> 取消
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

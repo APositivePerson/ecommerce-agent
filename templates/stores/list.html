@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block page_title %}店铺列表{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-shop"></i> 店铺列表
+            <span class="badge bg-secondary ms-2">{{ pagination.total }}</span>
+        </div>
+        <div>
+            <a href="{{ url_for('store_new') }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus"></i> 新建店铺
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- 搜索栏 -->
+        <form method="GET" class="mb-4">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" name="search"
+                           placeholder="搜索店铺名/品牌/联系人..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="status">
+                        <option value="">全部状态</option>
+                        <option value="active" {{ 'selected' if status == 'active' }}>营业中</option>
+                        <option value="inactive" {{ 'selected' if status == 'inactive' }}>已停业</option>
+                        <option value="suspended" {{ 'selected' if status == 'suspended' }}>已暂停</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- 店铺表格 -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>店铺信息</th>
+                        <th>平台</th>
+                        <th>品牌</th>
+                        <th>健康度</th>
+                        <th>商品数</th>
+                        <th>状态</th>
+                        <th>合规</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for store in pagination.items %}
+                    <tr>
+                        <td>{{ store.id }}</td>
+                        <td>
+                            <div>{{ store.name }}</div>
+                            <small class="text-muted">{{ store.contact_phone or '-' }}</small>
+                        </td>
+                        <td>
+                            {% if store.platform == 'wechat' %}
+                                <span class="badge bg-success">微信小店</span>
+                            {% elif store.platform == 'taobao' %}
+                                <span class="badge bg-warning">淘宝</span>
+                            {% elif store.platform == 'jd' %}
+                                <span class="badge bg-danger">京东</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ store.platform }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ store.brand_name or '-' }}</td>
+                        <td>
+                            {% if store.health_score >= 90 %}
+                                <span class="badge bg-success">{{ store.health_score }}分</span>
+                            {% elif store.health_score >= 70 %}
+                                <span class="badge bg-warning">{{ store.health_score }}分</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ store.health_score }}分</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ store.product_count }}</td>
+                        <td>
+                            {% if store.status == 'active' %}
+                                <span class="badge bg-success">营业中</span>
+                            {% elif store.status == 'inactive' %}
+                                <span class="badge bg-secondary">已停业</span>
+                            {% else %}
+                                <span class="badge bg-warning">已暂停</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if store.is_compliant %}
+                                <span class="badge bg-success">合规</span>
+                            {% else %}
+                                <span class="badge bg-danger">违规({{ store.violation_count }}次)</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('store_detail', store_id=store.id) }}" class="btn btn-sm btn-outline-primary table-action-btn">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ url_for('store_edit', store_id=store.id) }}" class="btn btn-sm btn-outline-success table-action-btn">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            暂无店铺数据
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        {% if pagination.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('stores', page=pagination.prev_num, search=search, status=status) }}">上一页</a>
+                    </li>
+                {% endif %}
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
+                            <a class="page-link" href="{{ url_for('stores', page=page_num, search=search, status=status) }}">{{ page_num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('stores', page=pagination.next_num, search=search, status=status) }}">下一页</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

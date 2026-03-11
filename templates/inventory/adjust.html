@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block page_title %}库存调整{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-plus-circle"></i> 库存调整
+    </div>
+    <div class="card-body">
+        <form method="POST" id="adjustForm">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="store_id" class="form-label">店铺 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="store_id" name="store_id" required onchange="loadProducts()">
+                            <option value="">请选择店铺</option>
+                            {% for store in stores %}
+                            <option value="{{ store.id }}">{{ store.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="product_id" class="form-label">商品 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="product_id" name="product_id" required>
+                            <option value="">请先选择店铺</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="warehouse_name" class="form-label">仓库名称</label>
+                        <input type="text" class="form-control" id="warehouse_name" name="warehouse_name" placeholder="如：主仓库">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="warehouse_code" class="form-label">仓库编码</label>
+                        <input type="text" class="form-control" id="warehouse_code" name="warehouse_code" placeholder="如：WH001">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="transaction_type" class="form-label">变动类型 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="transaction_type" name="transaction_type" required>
+                            <option value="in">入库</option>
+                            <option value="out">出库</option>
+                            <option value="adjust">调整</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="quantity_change" class="form-label">变动数量 <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="quantity_change" name="quantity_change"
+                               required min="1" value="1">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="warning_threshold" class="form-label">预警阈值</label>
+                        <input type="number" class="form-control" id="warning_threshold" name="warning_threshold" value="10">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">变动原因</label>
+                        <select class="form-select" id="reason" name="reason">
+                            <option value="">请选择原因</option>
+                            <option value="采购入库">采购入库</option>
+                            <option value="退货入库">退货入库</option>
+                            <option value="调拨入库">调拨入库</option>
+                            <option value="销售出库">销售出库</option>
+                            <option value="退货出库">退货出库</option>
+                            <option value="调拨出库">调拨出库</option>
+                            <option value="报损">报损</option>
+                            <option value="盘点调整">盘点调整</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="reference_type" class="form-label">关联类型</label>
+                        <select class="form-select" id="reference_type" name="reference_type">
+                            <option value="">无</option>
+                            <option value="order">订单</option>
+                            <option value="purchase">采购单</option>
+                            <option value="return">退货单</option>
+                            <option value="transfer">调拨单</option>
+                            <option value="inventory">盘点单</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="reference_id" class="form-label">关联单号</label>
+                <input type="text" class="form-control" id="reference_id" name="reference_id" placeholder="关联的订单号/采购单号等">
+            </div>
+
+            <div class="mb-3">
+                <label for="note" class="form-label">备注</label>
+                <textarea class="form-control" id="note" name="note" rows="2" placeholder="其他说明..."></textarea>
+            </div>
+
+            <hr>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> 提交
+                </button>
+                <a href="{{ url_for('inventory') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-lg"></i> 取消
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+async function loadProducts() {
+    const storeId = document.getElementById('store_id').value;
+    const productSelect = document.getElementById('product_id');
+
+    if (!storeId) {
+        productSelect.innerHTML = '<option value="">请先选择店铺</option>';
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/products?store_id=${storeId}`);
+        const result = await response.json();
+
+        if (result.success) {
+            productSelect.innerHTML = '<option value="">请选择商品</option>';
+            result.data.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.id;
+                option.textContent = `${product.name} (${product.sku_code}) - ¥${product.sale_price}`;
+                productSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading products:', error);
+    }
+}
+</script>
+{% endblock %}

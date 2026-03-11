@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ '编辑商品' if product else '新建商品' }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-box"></i> {{ '编辑商品' if product else '新建商品' }}
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <!-- 基本信息 -->
+            <h6 class="text-muted mb-3">基本信息</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="sku_code" class="form-label">SKU编码 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="sku_code" name="sku_code"
+                               value="{{ product.sku_code if product else '' }}" required
+                               {% if product %}readonly{% endif %}
+                               placeholder="如：SKU001">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">商品名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               value="{{ product.name if product else '' }}" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="store_id" class="form-label">店铺</label>
+                        <select class="form-select" id="store_id" name="store_id">
+                            <option value="">请选择店铺</option>
+                            {% for store in stores %}
+                            <option value="{{ store.id }}" {{ 'selected' if product and product.store_id == store.id else '' }}>
+                                {{ store.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="category_id" class="form-label">分类</label>
+                        <select class="form-select" id="category_id" name="category_id">
+                            <option value="">请选择分类</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {{ 'selected' if product and product.category_id == cat.id else '' }}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+            <!-- 价格信息 -->
+            <h6 class="text-muted mb-3">价格信息</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="sale_price" class="form-label">售价 <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price"
+                               value="{{ product.sale_price if product else '' }}" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="original_price" class="form-label">原价</label>
+                        <input type="number" step="0.01" class="form-control" id="original_price" name="original_price"
+                               value="{{ product.original_price if product else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="cost_price" class="form-label">成本价</label>
+                        <input type="number" step="0.01" class="form-control" id="cost_price" name="cost_price"
+                               value="{{ product.cost_price if product else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+            <!-- 商品信息 -->
+            <h6 class="text-muted mb-3">商品信息</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">商品标题</label>
+                        <input type="text" class="form-control" id="title" name="title"
+                               value="{{ product.title if product else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="subtitle" class="form-label">副标题</label>
+                        <input type="text" class="form-control" id="subtitle" name="subtitle"
+                               value="{{ product.subtitle if product else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="unit" class="form-label">单位</label>
+                        <input type="text" class="form-control" id="unit" name="unit"
+                               value="{{ product.unit if product else '件' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="main_image" class="form-label">主图URL</label>
+                        <input type="url" class="form-control" id="main_image" name="main_image"
+                               value="{{ product.main_image if product else '' }}" placeholder="https://...">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="short_description" class="form-label">简短描述</label>
+                <textarea class="form-control" id="short_description" name="short_description" rows="2">{{ product.short_description if product else '' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="description" class="form-label">商品描述</label>
+                <textarea class="form-control" id="description" name="description" rows="5">{{ product.description if product else '' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="keywords" class="form-label">关键词</label>
+                <input type="text" class="form-control" id="keywords" name="keywords"
+                       value="{{ product.keywords if product else '' }}" placeholder="用逗号分隔">
+            </div>
+
+            <hr>
+            <!-- 状态设置 -->
+            <h6 class="text-muted mb-3">状态设置</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">销售状态</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="active" {{ 'selected' if product and product.status == 'active' else '' }}>上架</option>
+                            <option value="inactive" {{ 'selected' if product and product.status == 'inactive' else '' }}>下架</option>
+                            <option value="out_of_stock" {{ 'selected' if product and product.status == 'out_of_stock' else '' }}>缺货</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label class="form-label">商品标签</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="is_hot" name="is_hot"
+                                   {{ 'checked' if product and product.is_hot else '' }}>
+                            <label class="form-check-label" for="is_hot">热门商品</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="is_new" name="is_new"
+                                   {{ 'checked' if product and product.is_new else '' }}>
+                            <label class="form-check-label" for="is_new">新品</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="is_recommend" name="is_recommend"
+                                   {{ 'checked' if product and product.is_recommend else '' }}>
+                            <label class="form-check-label" for="is_recommend">推荐</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> 保存
+                </button>
+                <a href="{{ url_for('products') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-lg"></i> 取消
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

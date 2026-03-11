@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block page_title %}商品列表{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-box"></i> 商品列表
+            <span class="badge bg-secondary ms-2">{{ pagination.total }}</span>
+        </div>
+        <div>
+            <a href="{{ url_for('product_new') }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus"></i> 新建商品
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- 搜索和筛选 -->
+        <form method="GET" class="mb-4">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" name="search"
+                           placeholder="搜索商品名称/SKU/关键词..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="status">
+                        <option value="">全部状态</option>
+                        <option value="active" {{ 'selected' if status == 'active' }}>上架</option>
+                        <option value="inactive" {{ 'selected' if status == 'inactive' }}>下架</option>
+                        <option value="out_of_stock" {{ 'selected' if status == 'out_of_stock' }}>缺货</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="category_id">
+                        <option value="">全部分类</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {{ 'selected' if category_id == cat.id }}>{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" id="is_hot" name="is_hot" value="1" {{ 'checked' if is_hot else '' }}>
+                        <label class="form-check-label" for="is_hot">热门</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- 商品表格 -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>商品信息</th>
+                        <th>分类</th>
+                        <th>价格</th>
+                        <th>库存</th>
+                        <th>销量</th>
+                        <th>状态</th>
+                        <th>标签</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in pagination.items %}
+                    <tr>
+                        <td>{{ product.id }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if product.main_image %}
+                                <img src="{{ product.main_image }}" alt="" style="width: 40px; height: 40px; object-fit: cover;" class="me-2 rounded">
+                                {% else %}
+                                <div class="bg-secondary text-white d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-image"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div>{{ product.name }}</div>
+                                    <small class="text-muted">{{ product.sku_code }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ product.category.name if product.category else '-' }}</td>
+                        <td>
+                            <div>¥{{ product.sale_price or '0.00' }}</div>
+                            {% if product.original_price and product.original_price > product.sale_price %}
+                            <small class="text-muted text-decoration-line-through">¥{{ product.original_price }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set stock = product.get_current_stock() %}
+                            <span class="{{ 'text-danger' if stock == 0 else ('text-warning' if stock <= 10 else '') }}">
+                                {{ stock }}
+                            </span>
+                        </td>
+                        <td>{{ product.sales_count }}</td>
+                        <td>
+                            {% if product.status == 'active' %}
+                                <span class="badge bg-success">上架</span>
+                            {% elif product.status == 'inactive' %}
+                                <span class="badge bg-secondary">下架</span>
+                            {% else %}
+                                <span class="badge bg-danger">缺货</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.is_hot %}<span class="badge bg-danger">热</span>{% endif %}
+                            {% if product.is_new %}<span class="badge bg-primary">新</span>{% endif %}
+                            {% if product.is_recommend %}<span class="badge bg-info">荐</span>{% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-sm btn-outline-primary table-action-btn">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ url_for('product_edit', product_id=product.id) }}" class="btn btn-sm btn-outline-success table-action-btn">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            暂无商品数据
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        {% if pagination.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('products', page=pagination.prev_num, search=search, status=status, category_id=category_id) }}">上一页</a>
+                    </li>
+                {% endif %}
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
+                            <a class="page-link" href="{{ url_for('products', page=page_num, search=search, status=status, category_id=category_id) }}">{{ page_num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('products', page=pagination.next_num, search=search, status=status, category_id=category_id) }}">下一页</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

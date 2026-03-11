@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block page_title %}违规记录 - {{ store.name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-shield-x"></i> 违规记录 - {{ store.name }}
+        </div>
+        <a href="{{ url_for('store_detail', store_id=store.id) }}" class="btn btn-sm btn-secondary">
+            <i class="bi bi-arrow-left"></i> 返回店铺
+        </a>
+    </div>
+    <div class="card-body">
+        {% if violations %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>违规类型</th>
+                            <th>违规原因</th>
+                            <th>处罚措施</th>
+                            <th>扣分</th>
+                            <th>状态</th>
+                            <th>上报时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for violation in violations %}
+                        <tr>
+                            <td>{{ violation.id }}</td>
+                            <td>{{ violation.violation_type or '-' }}</td>
+                            <td>{{ violation.violation_reason or '-' }}</td>
+                            <td>{{ violation.penalty or '-' }}</td>
+                            <td>{{ violation.points }}</td>
+                            <td>
+                                {% if violation.status == 'pending' %}
+                                    <span class="badge bg-warning">待处理</span>
+                                {% elif violation.status == 'resolved' %}
+                                    <span class="badge bg-success">已解决</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">已忽略</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ violation.reported_at.strftime('%Y-%m-%d %H:%M') if violation.reported_at else '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-center text-muted py-4">暂无违规记录</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
