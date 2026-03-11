@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block page_title %}微信小店配置 - {{ store.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-wechat"></i> 微信小店配置
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="app_id" class="form-label">AppID <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="app_id" name="app_id"
+                               value="{{ config.app_id if config else '' }}" required
+                               placeholder="微信开放平台AppID">
+                        <small class="text-muted">在微信公众平台注册小程序/小游戏后获取</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="app_secret" class="form-label">AppSecret <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" id="app_secret" name="app_secret"
+                               value="{{ config.app_secret if config else '' }}" required
+                               placeholder="微信开放平台AppSecret">
+                        <small class="text-muted">请妥善保管，不要泄露给他人</small>
+                    </div>
+
+                    {% if config and config.is_authorized %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i>
+                        <strong>已授权</strong> - 授权时间：{{ config.authorized_at.strftime('%Y-%m-%d %H:%M') if config.authorized_at else '-' }}
+                    </div>
+                    {% endif %}
+
+                    <hr>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> 保存配置
+                        </button>
+                        {% if config and config.app_id and config.app_secret %}
+                        <a href="{{ url_for('wechat_authorize', store_id=store.id) }}" class="btn btn-success">
+                            <i class="bi bi-link"></i> 微信授权
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if config and config.is_authorized %}
+        <!-- 同步操作 -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="bi bi-arrow-repeat"></i> 数据同步
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <a href="{{ url_for('wechat_sync_products', store_id=store.id) }}" class="btn btn-outline-primary w-100 mb-2">
+                            <i class="bi bi-box"></i> 同步商品
+                        </a>
+                        <small class="text-muted">从微信小店拉取商品到本地系统</small>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{{ url_for('wechat_sync_orders', store_id=store.id) }}" class="btn btn-outline-success w-100 mb-2">
+                            <i class="bi bi-cart"></i> 同步订单
+                        </a>
+                        <small class="text-muted">从微信小店拉取最新订单</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <!-- 帮助文档 -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-question-circle"></i> 配置说明
+            </div>
+            <div class="card-body">
+                <h6>如何获取AppID和AppSecret？</h6>
+                <ol class="small">
+                    <li>访问 <a href="https://mp.weixin.qq.com" target="_blank">微信公众平台</a></li>
+                    <li>登录您的账号</li>
+                    <li>进入"设置与开发" → "基本配置"</li>
+                    <li>获取AppID和AppSecret</li>
+                </ol>
+
+                <hr>
+
+                <h6>授权说明</h6>
+                <p class="small text-muted">
+                    点击"微信授权"后，需要使用微信公众号管理员微信扫码授权。
+                    授权成功后即可同步商品和订单数据。
+                </p>
+
+                <hr>
+
+                <h6>功能说明</h6>
+                <ul class="small text-muted">
+                    <li><strong>商品同步：</strong>将微信小店的商品同步到本地系统</li>
+                    <li><strong>订单同步：</strong>将微信小店的订单同步到本地系统</li>
+                    <li><strong>库存管理：</strong>本地库存可同步到微信小店</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a href="{{ url_for('store_detail', store_id=store.id) }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> 返回店铺
+    </a>
+</div>
+{% endblock %}

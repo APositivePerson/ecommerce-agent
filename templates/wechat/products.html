@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block page_title %}微信商品 - {{ store.name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-wechat text-success"></i> 微信商品列表
+            <span class="badge bg-secondary ms-2">{{ pagination.total }}</span>
+        </div>
+        <div>
+            {% if config and config.is_authorized %}
+            <a href="{{ url_for('wechat_sync_products', store_id=store.id) }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-arrow-repeat"></i> 同步商品
+            </a>
+            <a href="{{ url_for('wechat_config', store_id=store.id) }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-gear"></i> 配置
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        {% if not config or not config.is_authorized %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            请先完成微信授权：
+            <a href="{{ url_for('wechat_config', store_id=store.id) }}">前往配置</a>
+        </div>
+        {% endif %}
+
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>微信商品ID</th>
+                        <th>商品信息</th>
+                        <th>价格</th>
+                        <th>状态</th>
+                        <th>质量状态</th>
+                        <th>同步状态</th>
+                        <th>最后同步</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in pagination.items %}
+                    <tr>
+                        <td>{{ product.product_id }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if product.main_image %}
+                                <img src="{{ product.main_image }}" alt="" style="width: 40px; height: 40px; object-fit: cover;" class="me-2 rounded">
+                                {% else %}
+                                <div class="bg-secondary text-white d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-image"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div>{{ product.name }}</div>
+                                    {% if product.local_product_id %}
+                                    <small class="text-success">已绑定本地商品 #{{ product.local_product_id }}</small>
+                                    {% else %}
+                                    <small class="text-warning">未绑定本地商品</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div>¥{{ product.sale_price or '0.00' }}</div>
+                            {% if product.original_price and product.original_price > product.sale_price %}
+                            <small class="text-muted text-decoration-line-through">¥{{ product.original_price }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.status == '0' %}
+                                <span class="badge bg-success">上架</span>
+                            {% elif product.status == '1' %}
+                                <span class="badge bg-secondary">下架</span>
+                            {% elif product.status == '2' %}
+                                <span class="badge bg-warning">违规下架</span>
+                            {% else %}
+                                <span class="badge bg-info">{{ product.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.quality_status == 'normal' %}
+                                <span class="badge bg-success">正常</span>
+                            {% elif product.quality_status == 'checked' %}
+                                <span class="badge bg-info">审核中</span>
+                            {% else %}
+                                <span class="badge bg-warning">{{ product.quality_status or '-' }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.sync_status == 'synced' %}
+                                <span class="badge bg-success">已同步</span>
+                            {% elif product.sync_status == 'pending' %}
+                                <span class="badge bg-warning">待同步</span>
+                            {% else %}
+                                <span class="badge bg-danger">错误</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.last_synced_at %}
+                                {{ product.last_synced_at.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            暂无微信商品数据，请先同步
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if pagination.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('wechat_products', store_id=store.id, page=pagination.prev_num) }}">上一页</a>
+                    </li>
+                {% endif %}
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
+                            <a class="page-link" href="{{ url_for('wechat_products', store_id=store.id, page=page_num) }}">{{ page_num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('wechat_products', store_id=store.id, page=pagination.next_num) }}">下一页</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-3">
+    <a href="{{ url_for('store_detail', store_id=store.id) }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> 返回店铺
+    </a>
+</div>
+{% endblock %}

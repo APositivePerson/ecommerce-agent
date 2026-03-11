@@ -1029,6 +1029,12 @@ def api_categories():
     })
 
 
+# ==================== 微信小店API对接 ====================
+
+from wechat_api import WechatConfig, WechatProduct, WechatOrder, register_wechat_routes
+register_wechat_routes(app)
+
+
 if __name__ == '__main__':
     with app.app_context():
         init_db()

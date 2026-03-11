@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block page_title %}微信订单 - {{ store.name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-wechat text-success"></i> 微信订单列表
+            <span class="badge bg-secondary ms-2">{{ pagination.total }}</span>
+        </div>
+        <div>
+            {% if config and config.is_authorized %}
+            <a href="{{ url_for('wechat_sync_orders', store_id=store.id) }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-arrow-repeat"></i> 同步订单
+            </a>
+            <a href="{{ url_for('wechat_config', store_id=store.id) }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-gear"></i> 配置
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        {% if not config or not config.is_authorized %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            请先完成微信授权：
+            <a href="{{ url_for('wechat_config', store_id=store.id) }}">前往配置</a>
+        </div>
+        {% endif %}
+
+        <!-- 搜索和筛选 -->
+        <form method="GET" class="mb-4">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <select class="form-select" name="status">
+                        <option value="">全部状态</option>
+                        <option value="10" {{ 'selected' if status == '10' }}>待支付</option>
+                        <option value="20" {{ 'selected' if status == '20' }}>已支付</option>
+                        <option value="30" {{ 'selected' if status == '30' }}>已发货</option>
+                        <option value="40" {{ 'selected' if status == '40' }}>已收货</option>
+                        <option value="50" {{ 'selected' if status == '50' }}>已完成</option>
+                        <option value="60" {{ 'selected' if status == '60' }}>已取消</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">筛选</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>订单ID</th>
+                        <th>商品信息</th>
+                        <th>数量</th>
+                        <th>金额</th>
+                        <th>订单状态</th>
+                        <th>支付方式</th>
+                        <th>下单时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in pagination.items %}
+                    <tr>
+                        <td>
+                            <div class="text-break" style="max-width: 120px;">{{ order.order_id }}</div>
+                        </td>
+                        <td>
+                            <div>{{ order.product_name or '-' }}</div>
+                            <small class="text-muted">商品ID: {{ order.product_id or '-' }}</small>
+                        </td>
+                        <td>{{ order.quantity }}</td>
+                        <td>
+                            <div class="text-danger fw-bold">¥{{ order.actual_price or '0.00' }}</div>
+                            {% if order.total_price and order.total_price != order.actual_price %}
+                            <small class="text-muted text-decoration-line-through">¥{{ order.total_price }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.order_status == '10' %}
+                                <span class="badge bg-warning">待支付</span>
+                            {% elif order.order_status == '20' %}
+                                <span class="badge bg-info">已支付</span>
+                            {% elif order.order_status == '30' %}
+                                <span class="badge bg-primary">已发货</span>
+                            {% elif order.order_status == '40' %}
+                                <span class="badge bg-success">已收货</span>
+                            {% elif order.order_status == '50' %}
+                                <span class="badge bg-success">已完成</span>
+                            {% elif order.order_status == '60' %}
+                                <span class="badge bg-secondary">已取消</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ order.order_status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.pay_type == '微信支付' %}
+                                <span class="badge bg-success">微信支付</span>
+                            {% elif order.pay_type == 'balance' %}
+                                <span class="badge bg-info">余额支付</span>
+                            {% else %}
+                                {{ order.pay_type or '-' }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.create_time %}
+                                {{ order.create_time.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            暂无微信订单数据，请先同步
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if pagination.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('wechat_orders', store_id=store.id, page=pagination.prev_num, status=status) }}">上一页</a>
+                    </li>
+                {% endif %}
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
+                            <a class="page-link" href="{{ url_for('wechat_orders', store_id=store.id, page=page_num, status=status) }}">{{ page_num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('wechat_orders', store_id=store.id, page=pagination.next_num, status=status) }}">下一页</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-3">
+    <a href="{{ url_for('store_detail', store_id=store.id) }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> 返回店铺
+    </a>
+</div>
+{% endblock %}

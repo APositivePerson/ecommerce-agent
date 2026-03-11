@@ -139,6 +139,28 @@
                 </a>
             </div>
         </div>
+
+        <!-- 微信小店管理 -->
+        {% if store.platform == 'wechat' %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-wechat text-success"></i> 微信小店
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('wechat_config', store_id=store.id) }}" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-gear"></i> API配置
+                    </a>
+                    <a href="{{ url_for('wechat_products', store_id=store.id) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-box"></i> 微信商品
+                    </a>
+                    <a href="{{ url_for('wechat_orders', store_id=store.id) }}" class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-cart"></i> 微信订单
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
