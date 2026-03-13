@@ -88,6 +88,9 @@
                     <a class="nav-link {{ 'active' if 'products' in request.endpoint }}" href="{{ url_for('products') }}">
                         <i class="bi bi-box"></i> 商品列表
                     </a>
+                    <a class="nav-link {{ 'active' if 'ai_listing' in request.endpoint }}" href="{{ url_for('ai_listing_page') }}">
+                        <i class="bi bi-robot"></i> AI智能上架
+                    </a>
                     <a class="nav-link {{ 'active' if 'categories' in request.endpoint }}" href="{{ url_for('categories') }}">
                         <i class="bi bi-tags"></i> 分类管理
                     </a>

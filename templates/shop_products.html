@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微信小店商品管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .toolbar {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        button {
+            background: #07c160;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #06ad56;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+        
+        .product-info {
+            padding: 15px;
+        }
+        
+        .product-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .product-price {
+            color: #ff4d4f;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .product-price span {
+            font-size: 14px;
+        }
+        
+        .product-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        
+        .status-5 {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .error {
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            color: #ff4d4f;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .empty {
+            text-align: center;
+            padding: 60px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏪 微信小店商品管理</h1>
+        
+        <div class="toolbar">
+            <button id="refreshBtn" onclick="loadProducts()">
+                🔄 刷新商品列表
+            </button>
+            <button id="syncBtn" onclick="syncProducts()" style="margin-left: 10px; background: #1890ff;">
+                💾 同步到数据库
+            </button>
+        </div>
+        
+        <div id="message"></div>
+        <div id="productList" class="product-grid">
+            <div class="loading">点击"刷新商品列表"加载数据</div>
+        </div>
+    </div>
+
+    <script>
+        // 加载商品列表
+        async function loadProducts() {
+            const btn = document.getElementById('refreshBtn');
+            const list = document.getElementById('productList');
+            const msg = document.getElementById('message');
+            
+            btn.disabled = true;
+            btn.textContent = '加载中...';
+            list.innerHTML = '<div class="loading">正在加载商品...</div>';
+            msg.innerHTML = '';
+            
+            try {
+                // 使用正确的API路径
+                const response = await fetch('/api/shop/products');
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderProducts(result.data.products);
+                } else {
+                    msg.innerHTML = `<div class="error">错误: ${result.error}</div>`;
+                    list.innerHTML = '';
+                }
+            } catch (error) {
+                msg.innerHTML = `<div class="error">请求失败: ${error.message}</div>`;
+                list.innerHTML = '';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 刷新商品列表';
+            }
+        }
+        
+        // 渲染商品列表
+        function renderProducts(products) {
+            const list = document.getElementById('productList');
+            
+            if (products.length === 0) {
+                list.innerHTML = '<div class="empty">暂无商品</div>';
+                return;
+            }
+            
+            list.innerHTML = products.map(p => `
+                <div class="product-card">
+                    <img src="${p.head_imgs[0] || ''}" alt="${p.title}" class="product-image" onerror="this.src='https://via.placeholder.com/280x200?text=No+Image'">
+                    <div class="product-info">
+                        <div class="product-title">${p.title}</div>
+                        <div class="product-price">
+                            <span>¥</span>${p.min_price.toFixed(2)}
+                            ${p.max_price > p.min_price ? ` - ¥${p.max_price.toFixed(2)}` : ''}
+                        </div>
+                        <span class="product-status status-${p.status}">
+                            ${p.status === 5 ? '在售' : '其他'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 同步商品到数据库
+        async function syncProducts() {
+            const btn = document.getElementById('syncBtn');
+            const msg = document.getElementById('message');
+            
+            btn.disabled = true;
+            btn.textContent = '同步中...';
+            
+            try {
+                const response = await fetch('/api/shop/products/sync', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    msg.innerHTML = `<div style="background: #f6ffed; border: 1px solid #b7eb8f; color: #52c41a; padding: 15px 20px; border-radius: 8px;">
+                        ✅ 同步成功！共同步 ${result.data.synced_count} 个商品
+                    </div>`;
+                } else {
+                    msg.innerHTML = `<div class="error">同步失败: ${result.error}</div>`;
+                }
+            } catch (error) {
+                msg.innerHTML = `<div class="error">同步失败: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 同步到数据库';
+            }
+        }
+        
+        // 页面加载时自动获取商品
+        document.addEventListener('DOMContentLoaded', loadProducts);
+    </script>
+</body>
+</html>

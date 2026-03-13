@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+import time
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from models import db, User, Role, Store, StoreViolation, Category, Product, Inventory, InventoryTransaction
 from datetime import datetime, timedelta
@@ -1036,7 +1037,365 @@ register_wechat_routes(app)
 
 
 if __name__ == '__main__':
-    with app.app_context():
-        init_db()
-        print("数据库初始化完成！")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)
+
+
+# ==================== 微信小店商品管理 ====================
+from routes_shop import shop_api
+
+@app.route('/wxshop/products')
+def wechat_shop_products():
+    return render_template('shop_products.html')
+
+@app.route('/api/shop/products')
+def api_shop_products():
+    try:
+        limit = request.args.get('limit', 10, type=int)
+        result = shop_api.get_product_list(limit=limit)
+        
+        if result.get("errcode") != 0:
+            return jsonify({"success": False, "error": result.get("errmsg")}), 400
+        
+        product_ids = result.get("product_ids", [])
+        products = []
+        
+        for pid in product_ids:
+            detail = shop_api.get_product_detail(pid)
+            if detail.get("errcode") == 0:
+                product = detail.get("product", {})
+                formatted = shop_api.format_product_info(product)
+                products.append(formatted)
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "products": products,
+                "total": result.get("total_num", 0)
+            }
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/shop/products/<product_id>')
+def api_shop_product_detail(product_id):
+    try:
+        result = shop_api.get_product_detail(product_id)
+        if result.get("errcode") != 0:
+            return jsonify({"success": False, "error": result.get("errmsg")}), 400
+        return jsonify({"success": True, "data": result.get("product", {})})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/all_products')
+def all_products():
+    """综合商品页面 - 本地商品 + 微信小店商品"""
+    # 获取本地商品
+    local_products = Product.query.order_by(Product.created_at.desc()).limit(50).all()
+    
+    # 获取微信小店商品
+    wechat_products = []
+    try:
+        from routes_shop import shop_api
+        result = shop_api.get_product_list(limit=50)
+        if result.get("errcode") == 0:
+            for pid in result.get("product_ids", []):
+                detail = shop_api.get_product_detail(pid)
+                if detail.get("errcode") == 0:
+                    product = detail.get("product", {})
+                    formatted = shop_api.format_product_info(product)
+                    wechat_products.append(formatted)
+    except Exception as e:
+        print(f"获取微信商品失败: {e}")
+    
+    return render_template('all_products.html', 
+                         local_products=local_products,
+                         wechat_products=wechat_products)
+
+
+@app.route('/api/products/auto_sync', methods=['POST'])
+def auto_sync_products():
+    """自动从微信小店同步商品到本地并上架"""
+    try:
+        from routes_shop import shop_api
+        synced_count = 0
+        
+        # 获取微信小店商品
+        result = shop_api.get_product_list(limit=50)
+        if result.get("errcode") != 0:
+            return jsonify({"success": False, "error": result.get("errmsg")}), 400
+        
+        for pid in result.get("product_ids", []):
+            detail = shop_api.get_product_detail(pid)
+            if detail.get("errcode") != 0:
+                continue
+            
+            product = detail.get("product", {})
+            formatted = shop_api.format_product_info(product)
+            
+            # 检查是否已存在
+            existing = Product.query.filter_by(sku_code=formatted.get("product_id")).first()
+            if not existing:
+                # 创建新商品
+                # 获取默认店铺
+                store = Store.query.first()
+                if not store:
+                    store = Store(name="默认店铺", code="default")
+                    db.session.add(store)
+                    db.session.flush()
+                
+                new_product = Product(
+                    store_id=store.id,
+                    name=formatted.get("name", "")[:200],
+                    title=formatted.get("title", "")[:300],
+                    sku_code=formatted.get("product_id", ""),
+                    sale_price=formatted.get("min_price", 0),
+                    status='active',
+                    main_image=formatted.get("head_imgs", [""])[0] if formatted.get("head_imgs") else "",
+                    description=formatted.get("short_title", "")
+                )
+                db.session.add(new_product)
+                synced_count += 1
+        
+        db.session.commit()
+        return jsonify({"success": True, "synced": synced_count})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ==================== AI自动上架 ====================
+import re
+
+def parse_product_from_text(text: str) -> dict:
+    """从自然语言解析商品信息"""
+    text = text.strip()
+    
+    # 提取价格 - 更精确的匹配
+    price = 0
+    # 优先匹配"价格xxx元"或"xxx元"
+    price_match = re.search(r'价格[是]?(\d+\.?\d*)|(\d+\.?\d*)元', text)
+    if price_match:
+        price = float(price_match.group(1) or price_match.group(2) or 0)
+    # 匹配¥或￥符号
+    yen_match = re.search(r'[¥￥](\d+\.?\d*)', text)
+    if yen_match:
+        price = float(yen_match.group(1))
+    
+    # 提取商品名称（去掉常见描述词）
+    name = text
+    # 去掉价格相关词
+    name = re.sub(r'价?格?[是]?\d+\.?\d*\s*元?', '', name)
+    # 去掉"上架"、"卖"等词
+    name = re.sub(r'上?架?|出?售|卖', '', name)
+    name = name.strip()[:100]
+    
+    # 默认值
+    if not name:
+        name = "未命名商品"
+    if price == 0:
+        price = 99.0
+    
+    return {
+        "name": name,
+        "title": name,
+        "price": price,
+        "description": text
+    }
+
+
+@app.route('/api/products/ai_listing', methods=['POST'])
+def ai_product_listing():
+    """AI一句话自动上架商品（本地 + 微信小店）"""
+    try:
+        data = request.get_json()
+        user_text = data.get('text', '').strip()
+        
+        if not user_text:
+            return jsonify({"success": False, "error": "请输入商品描述"}), 400
+        
+        # 解析商品信息
+        product_info = parse_product_from_text(user_text)
+        
+        # 获取店铺
+        store = Store.query.first()
+        if not store:
+            store = Store(name="默认店铺", code="default")
+            db.session.add(store)
+            db.session.flush()
+        
+        # 创建本地商品
+        new_product = Product(
+            store_id=store.id,
+            name=product_info['name'],
+            title=product_info['title'],
+            sku_code=f"AI{int(time.time())}",
+            sale_price=product_info['price'],
+            status='active',
+            description=product_info['description']
+        )
+        db.session.add(new_product)
+        db.session.commit()
+        
+        # 尝试发布到微信小店
+        wechat_product_id = None
+        wechat_error = None
+        try:
+            from wechat_shop_api import WechatShopAPI
+            shop_api = WechatShopAPI()
+            
+            # 使用正确的微信小店API添加商品（完整格式）
+            import requests
+            import json
+            token = shop_api._get_access_token()
+            
+            # 添加商品（完整格式）
+            add_url = f"https://api.weixin.qq.com/channels/ec/product/add?access_token={token}"
+            
+            # 解析价格获取商品规格
+            price = int(product_info['price'] * 100)
+            weight = "1kg"
+            if "kg" in product_info['name']:
+                import re
+                w = re.search(r'(\d+\.?\d*)\s*kg', product_info['name'])
+                if w:
+                    weight = w.group(1) + "kg"
+            
+            add_data = {
+                "product_info": {
+                    "title": product_info['name'],
+                    "head_imgs": [
+                        "https://mmecimage.cn/p/wx304ca87183801402/Uw0bMXA-G2YRcgQfL2K3RQ"
+                    ],
+                    "cats": [
+                        {"cat_id": 1208},  # 宠物生活
+                        {"cat_id": 1209},  # 宠物主粮
+                        {"cat_id": 1215}   # 猫干粮
+                    ],
+                    "attrs": [
+                        {"attr_key": "产品产地", "attr_value": "国产"},
+                        {"attr_key": "保质期(天/月/年)", "attr_value": "18个月"},
+                        {"attr_key": "配方", "attr_value": "膨化粮"},
+                        {"attr_key": "净含量（kg）", "attr_value": weight}
+                    ],
+                    "express_info": {
+                        "template_id": "947963164004",
+                        "weight": 0
+                    },
+                    "skus": [{
+                        "price": price,
+                        "stock_num": 100,
+                        "sku_code": f"AI{int(time.time())}",
+                        "sku_attrs": [{"attr_key": "重量", "attr_value": weight}]
+                    }],
+                    "brand_id": "2100000000",
+                    "product_type": 1
+                }
+            }
+            
+            resp = requests.post(add_url, json=add_data, timeout=30)
+            wechat_result = resp.json()
+            
+            if wechat_result.get("errcode") == 0:
+                wechat_product_id = wechat_result.get("product_id")
+                # 上架商品
+                listing_url = f"https://api.weixin.qq.com/channels/ec/product/listing?access_token={token}"
+                requests.post(listing_url, json={"product_id": wechat_product_id, "status": 2}, timeout=30)
+            else:
+                wechat_error = wechat_result.get("errmsg", "微信上传失败")
+        except Exception as e:
+            wechat_error = str(e)
+        
+        return jsonify({
+            "success": True, 
+            "product": {
+                "id": new_product.id,
+                "name": new_product.name,
+                "price": new_product.sale_price,
+                "local": "✅ 本地创建成功",
+                "wechat": f"✅ 微信小店ID: {wechat_product_id}" if wechat_product_id else f"❌ 微信上传失败: {wechat_error}"
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/ai_listing')
+def ai_listing_page():
+    return render_template('ai_listing.html')
+
+@app.route('/product/add')
+def product_add_page():
+    return render_template('product_add.html')
+
+@app.route('/api/products/add', methods=['POST'])
+def api_product_add():
+    """商品上架API - 支持本地和微信小店"""
+    try:
+        data = request.get_json()
+        
+        name = data.get('name', '').strip()
+        price = data.get('price', 0)
+        
+        if not name or price <= 0:
+            return jsonify({"success": False, "error": "请填写商品名称和价格"}), 400
+        
+        result = {
+            "local_id": None,
+            "wechat_id": None,
+            "wechat_error": None
+        }
+        
+        # 上架到本地
+        if data.get('publish_local', True):
+            store = Store.query.first()
+            if not store:
+                store = Store(name="默认店铺", code="default")
+                db.session.add(store)
+                db.session.flush()
+            
+            product = Product(
+                store_id=store.id,
+                name=name[:200],
+                title=data.get('title', name)[:300],
+                sku_code=f"PROD{int(time.time())}",
+                sale_price=price,
+                status='active',
+                description=data.get('description', ''),
+                main_image=data.get('image_url', '')
+            )
+            db.session.add(product)
+            db.session.commit()
+            result['local_id'] = product.id
+            result['name'] = product.name
+            result['price'] = product.sale_price
+        
+        # 上架到微信小店
+        if data.get('publish_wechat', True):
+            try:
+                from wechat_shop_api import WechatShopAPI
+                shop_api = WechatShopAPI()
+                
+                wechat_data = {
+                    "product_type": 0,
+                    "name": name,
+                    "sku_list": [{
+                        "price": int(price * 100),
+                        "stock_num": 100,
+                        "sku_code": f"PROD{int(time.time())}"
+                    }],
+                    "category_id": int(data.get('category', 0)) if data.get('category') else 0
+                }
+                
+                wx_result = shop_api.create_product(wechat_data)
+                if wx_result.get("errcode") == 0:
+                    result['wechat_id'] = wx_result.get("product_id")
+                else:
+                    result['wechat_error'] = wx_result.get("errmsg", "上传失败")
+            except Exception as e:
+                result['wechat_error'] = str(e)
+        
+        return jsonify({"success": True, "product": result})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block page_title %}AI智能上架{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px 16px 0 0 !important;">
+                    <h4 class="mb-0"><i class="bi bi-robot"></i> AI智能上架</h4>
+                    <p class="mb-0 mt-2 opacity-75">用一句话描述商品，AI自动帮你创建并上架</p>
+                </div>
+                <div class="card-body p-4">
+                    <div class="input-group mb-4">
+                        <span class="input-group-text bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="bi bi-lightbulb"></i>
+                        </span>
+                        <input type="text" class="form-control form-control-lg" id="productText" 
+                               placeholder="例如：上架一款iPhone15手机，价格6999元"
+                               style="border-radius: 0 12px 12px 0; border: 2px solid #eee;">
+                    </div>
+                    
+                    <div class="text-center mb-4">
+                        <button onclick="submitListing()" class="btn btn-lg text-white px-5" 
+                                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px;">
+                            <i class="bi bi-magic"></i> 一键上架
+                        </button>
+                    </div>
+                    
+                    <div class="example-box p-3" style="background: #f8f9fa; border-radius: 12px;">
+                        <h6 class="mb-3"><i class="bi bi-stars text-primary"></i> 示例（点击使用）：</h6>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <div class="example-item p-2 rounded cursor-pointer" onclick="useExample('上架一款iPhone15手机，价格6999元')" 
+                                     style="cursor: pointer; border: 1px solid #eee; transition: all 0.3s;">
+                                    <i class="bi bi-phone text-primary"></i> 上架一款iPhone15手机，价格6999元
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="example-item p-2 rounded cursor-pointer" onclick="useExample('卖出100条纯棉毛巾，每条25元')" 
+                                     style="cursor: pointer; border: 1px solid #eee; transition: all 0.3s;">
+                                    <i class="bi bi-cart text-success"></i> 卖出100条纯棉毛巾，每条25元
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="example-item p-2 rounded cursor-pointer" onclick="useExample('上架新疆特产红枣，500g装卖39元')" 
+                                     style="cursor: pointer; border: 1px solid #eee; transition: all 0.3s;">
+                                    <i class="bi bi-gift text-danger"></i> 上架新疆特产红枣，500g装卖39元
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="result-card mt-4 p-4" id="resultCard" style="display: none; background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%); border-radius: 12px;">
+                        <h5 class="text-success"><i class="bi bi-check-circle-fill"></i> 上架成功！</h5>
+                        <div id="resultContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.example-item:hover {
+    background: #f0f4ff !important;
+    border-color: #667eea !important;
+}
+.spinner {
+    animation: spin 1s linear infinite;
+}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+</style>
+
+<script>
+function useExample(text) {
+    document.getElementById('productText').value = text;
+}
+
+async function submitListing() {
+    const text = document.getElementById('productText').value.trim();
+    if (!text) {
+        alert('请输入商品描述');
+        return;
+    }
+    
+    const btn = document.querySelector('button[onclick="submitListing()"]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> AI处理中...';
+    
+    try {
+        const resp = await fetch('/api/products/ai_listing', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text})
+        });
+        const data = await resp.json();
+        
+        if (data.success) {
+            document.getElementById('resultCard').style.display = 'block';
+            document.getElementById('resultContent').innerHTML = `
+                <p><strong>商品名称：</strong>${data.product.name}</p>
+                <p><strong>价格：</strong>¥${data.product.price}</p>
+                <p><strong>ID：</strong>${data.product.id}</p>
+            `;
+            document.getElementById('productText').value = '';
+        } else {
+            alert('❌ 上架失败：' + data.error);
+        }
+    } catch (e) {
+        alert('❌ 错误：' + e.message);
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-magic"></i> 一键上架';
+}
+</script>
+{% endblock %}

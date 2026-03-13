@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品上架 - 电商管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+        .card-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-radius: 16px 16px 0 0 !important;
+            padding: 20px;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #333;
+        }
+        .form-control, .form-select {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .platform-badge {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .badge-local { background: #667eea; color: white; }
+        .badge-wechat { background: #07c160; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="bi bi-plus-circle"></i> 商品上架</h4>
+                        <p class="mb-0 mt-2 opacity-75">同时发布到本地店铺和微信小店</p>
+                    </div>
+                    <div class="card-body">
+                        <form id="productForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">商品名称 *</label>
+                                    <input type="text" class="form-control" id="name" required 
+                                           placeholder="例如：iPhone 15 Pro Max">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">商品标题</label>
+                                    <input type="text" class="form-control" id="title" 
+                                           placeholder="商品展示标题">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">价格(元) *</label>
+                                    <input type="number" class="form-control" id="price" step="0.01" required 
+                                           placeholder="0.00">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">商品分类</label>
+                                    <select class="form-select" id="category">
+                                        <option value="">请选择分类</option>
+                                        <option value="1">数码电子</option>
+                                        <option value="2">服装鞋帽</option>
+                                        <option value="3">食品饮料</option>
+                                        <option value="4">家居用品</option>
+                                        <option value="5">美妆护肤</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">商品描述</label>
+                                <textarea class="form-control" id="description" rows="3" 
+                                          placeholder="商品详细描述..."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">商品图片URL</label>
+                                <input type="url" class="form-control" id="imageUrl" 
+                                       placeholder="https://example.com/image.jpg">
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label">发布平台</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="publishLocal" checked>
+                                        <label class="form-check-label platform-badge badge-local" for="publishLocal">
+                                            <i class="bi bi-hdd"></i> 本地店铺
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="publishWechat" checked>
+                                        <label class="form-check-label platform-badge badge-wechat" for="publishWechat">
+                                            <i class="bi bi-wechat"></i> 微信小店
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary text-white">
+                                    <i class="bi bi-cloud-upload"></i> 立即上架
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <div id="resultArea" class="mt-4" style="display: none;">
+                            <div class="alert" role="alert" id="resultAlert"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>上架中...';
+            
+            const data = {
+                name: document.getElementById('name').value,
+                title: document.getElementById('title').value,
+                price: parseFloat(document.getElementById('price').value),
+                category: document.getElementById('category').value,
+                description: document.getElementById('description').value,
+                image_url: document.getElementById('imageUrl').value,
+                publish_local: document.getElementById('publishLocal').checked,
+                publish_wechat: document.getElementById('publishWechat').checked
+            };
+            
+            try {
+                const resp = await fetch('/api/products/add', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const result = await resp.json();
+                
+                const resultArea = document.getElementById('resultArea');
+                const resultAlert = document.getElementById('resultAlert');
+                resultArea.style.display = 'block';
+                
+                if (result.success) {
+                    resultAlert.className = 'alert alert-success';
+                    let html = '<h5><i class="bi bi-check-circle-fill"></i> 上架成功！</h5>';
+                    html += `<p><strong>商品名称：</strong>${result.product.name}</p>`;
+                    html += `<p><strong>价格：</strong>¥${result.product.price}</p>`;
+                    if (result.product.local_id) {
+                        html += `<p class="text-success"><i class="bi bi-check"></i> 本地店铺: 已上架 (ID: ${result.product.local_id})</p>`;
+                    }
+                    if (result.product.wechat_id) {
+                        html += `<p class="text-success"><i class="bi bi-wechat"></i> 微信小店: 已上架 (ID: ${result.product.wechat_id})</p>`;
+                    }
+                    if (result.product.wechat_error) {
+                        html += `<p class="text-warning"><i class="bi bi-exclamation-triangle"></i> 微信小店: ${result.product.wechat_error}</p>`;
+                    }
+                    resultAlert.innerHTML = html;
+                    e.target.reset();
+                } else {
+                    resultAlert.className = 'alert alert-danger';
+                    resultAlert.innerHTML = `<i class="bi bi-x-circle-fill"></i> 上架失败：${result.error}`;
+                }
+            } catch (err) {
+                alert('错误：' + err.message);
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-cloud-upload"></i> 立即上架';
+        });
+    </script>
+</body>
+</html>
