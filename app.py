@@ -521,64 +521,72 @@ def inventory_adjust():
 @app.route('/products')
 @login_required
 def products():
-    """商品列表"""
-    query = Product.query
-
+    """商品列表 - 微信小店"""
+    from wechat_uploader import SmartWechatUploader
+    
     search = request.args.get('search', '')
-    if search:
-        query = query.filter(
-            db.or_(
-                Product.name.contains(search),
-                Product.sku_code.contains(search),
-                Product.title.contains(search),
-                Product.keywords.contains(search)
-            )
-        )
-
-    # 如果是店铺管理员，只能看到本店铺的商品
-    if current_user.store_id:
-        query = query.filter_by(store_id=current_user.store_id)
-
-    # 按状态筛选
-    status = request.args.get('status')
-    if status:
-        query = query.filter_by(status=status)
-
-    # 按分类筛选
-    category_id = request.args.get('category_id', type=int)
-    if category_id:
-        query = query.filter_by(category_id=category_id)
-
-    # 筛选热门/新品/推荐
-    is_hot = request.args.get('is_hot')
-    if is_hot:
-        query = query.filter_by(is_hot=True)
-
-    is_new = request.args.get('is_new')
-    if is_new:
-        query = query.filter_by(is_new=True)
-
-    is_recommend = request.args.get('is_recommend')
-    if is_recommend:
-        query = query.filter_by(is_recommend=True)
-
     page = request.args.get('page', 1, type=int)
-    pagination = query.order_by(Product.created_at.desc()).paginate(
-        page=page, per_page=20, error_out=False
-    )
-
-    # 获取分类列表
+    
+    try:
+        uploader = SmartWechatUploader()
+        product_ids = uploader.get_product_list(limit=100)
+        
+        all_products = []
+        for pid in product_ids:
+            status = uploader.get_product_status(pid)
+            if status.get('errcode') == 0:
+                all_products.append(status)
+        
+        # 搜索过滤
+        if search:
+            all_products = [p for p in all_products if search.lower() in (p.get('title') or '').lower()]
+        
+        # 分页
+        per_page = 20
+        total = len(all_products)
+        start = (page - 1) * per_page
+        end = start + per_page
+        page_products = all_products[start:end]
+        
+        pagination = type('obj', (object,), {
+            'items': page_products,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'pages': (total + per_page - 1) // per_page,
+            'has_prev': page > 1,
+            'has_next': page < (total + per_page - 1) // per_page,
+            'prev_num': page - 1,
+            'next_num': page + 1
+        })()
+        
+    except Exception as e:
+        print(f"获取微信商品失败: {e}")
+        pagination = type('obj', (object,), {
+            'items': [],
+            'total': 0,
+            'page': 1,
+            'per_page': 20,
+            'pages': 0,
+            'has_prev': False,
+            'has_next': False,
+            'prev_num': 1,
+            'next_num': 1
+        })()
+    
+    # 获取分类列表（本地）
     categories = Category.query.filter_by(status='active').order_by(Category.sort_order).all()
 
     return render_template('products/list.html', 
                            pagination=pagination, 
                            search=search, 
-                           status=status,
+                           status='',
                            categories=categories,
-                           category_id=category_id,
-                           is_hot=is_hot,
-                           is_new=is_new,
-                           is_recommend=is_recommend)
+                           category_id=0,
+                           is_hot='',
+                           is_new='',
+                           is_recommend='',
+                           is_wechat=True)
 
 
 @app.route('/products/<int:product_id>')
@@ -1036,8 +1044,83 @@ from wechat_api import WechatConfig, WechatProduct, WechatOrder, register_wechat
 register_wechat_routes(app)
 
 
-if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5000)
+# ==================== AI上架助手API ====================
+from wechat_uploader import smart_list_product, SmartWechatUploader
+
+@app.route('/api/uploader/list', methods=['POST'])
+def api_uploader_list():
+    """AI智能上架商品 - 自动识别类目"""
+    try:
+        data = request.get_json() or {}
+        
+        name = data.get('name', '').strip()
+        price = data.get('price')
+        
+        if not name:
+            return jsonify({"success": False, "message": "请提供商品名称"}), 400
+        if not price:
+            return jsonify({"success": False, "message": "请提供商品价格"}), 400
+        
+        # 调用智能上架助手
+        result = smart_list_product(
+            name=name,
+            price=float(price),
+            original_price=data.get('original_price'),
+            stock=data.get('stock', 100)
+        )
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route('/api/uploader/products', methods=['GET'])
+def api_uploader_products():
+    """获取微信小店商品列表"""
+    from wechat_uploader import WechatShopUploader
+    
+    try:
+        uploader = WechatShopUploader()
+        product_ids = uploader.get_product_list(limit=50)
+        
+        products = []
+        for pid in product_ids:
+            status = uploader.get_product_status(pid)
+            if status.get('errcode') == 0:
+                products.append(status)
+        
+        return jsonify({
+            "success": True,
+            "total": len(products),
+            "products": products
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route('/api/uploader/sync/<int:product_id>', methods=['POST'])
+def api_uploader_sync(product_id):
+    """从本地商品智能同步到微信小店 - 自动识别类目"""
+    from wechat_uploader import SmartWechatUploader
+    
+    try:
+        product = db.session.get(Product, product_id)
+        if not product:
+            return jsonify({"success": False, "message": "商品不存在"}), 404
+        
+        uploader = SmartWechatUploader()
+        
+        result = uploader.smart_create_and_list({
+            'name': product.name,
+            'price': product.sale_price,
+            'original_price': product.original_price,
+            'stock': 100,
+            'sku_code': product.sku_code
+        })
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
 # ==================== 微信小店商品管理 ====================
@@ -1399,3 +1482,8 @@ def api_product_add():
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+
+if __name__ == '__main__':
+    app.run(debug=False, host='0.0.0.0', port=5000)

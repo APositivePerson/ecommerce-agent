@@ -1,165 +1,201 @@
 {% extends "base.html" %}
 
-{% block page_title %}商品列表{% endblock %}
+{% block page_title %}微信小店商品{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <div>
-            <i class="bi bi-box"></i> 商品列表
-            <span class="badge bg-secondary ms-2">{{ pagination.total }}</span>
+<div class="card animate-fade-in">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-wechat text-success me-2"></i>
+            <span class="fw-bold">微信小店商品</span>
+            <span class="badge bg-success ms-2">{{ pagination.total }}</span>
         </div>
-        <div>
-            <a href="{{ url_for('product_new') }}" class="btn btn-sm btn-primary">
-                <i class="bi bi-plus"></i> 新建商品
-            </a>
-        </div>
+        <a href="{{ url_for('ai_listing_page') }}" class="btn btn-success btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>AI智能上架
+        </a>
     </div>
-    <div class="card-body">
-        <!-- 搜索和筛选 -->
-        <form method="GET" class="mb-4">
-            <div class="row g-2">
-                <div class="col-md-4">
-                    <input type="text" class="form-control" name="search"
-                           placeholder="搜索商品名称/SKU/关键词..." value="{{ search }}">
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" name="status">
-                        <option value="">全部状态</option>
-                        <option value="active" {{ 'selected' if status == 'active' }}>上架</option>
-                        <option value="inactive" {{ 'selected' if status == 'inactive' }}>下架</option>
-                        <option value="out_of_stock" {{ 'selected' if status == 'out_of_stock' }}>缺货</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" name="category_id">
-                        <option value="">全部分类</option>
-                        {% for cat in categories %}
-                        <option value="{{ cat.id }}" {{ 'selected' if category_id == cat.id }}>{{ cat.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <div class="form-check form-switch mt-2">
-                        <input class="form-check-input" type="checkbox" id="is_hot" name="is_hot" value="1" {{ 'checked' if is_hot else '' }}>
-                        <label class="form-check-label" for="is_hot">热门</label>
+    <div class="card-body p-0">
+        <!-- 搜索 -->
+        <div class="p-3" style="background: #f8fafc;">
+            <form method="GET">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" name="search"
+                                   placeholder="搜索商品名称..." value="{{ search }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-search me-1"></i>搜索
+                        </button>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-search"></i> 搜索
-                    </button>
-                </div>
-            </div>
-        </form>
+            </form>
+        </div>
 
         <!-- 商品表格 -->
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th style="width: 60px;">ID</th>
                         <th>商品信息</th>
-                        <th>分类</th>
                         <th>价格</th>
-                        <th>库存</th>
-                        <th>销量</th>
                         <th>状态</th>
-                        <th>标签</th>
                         <th>操作</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for product in pagination.items %}
                     <tr>
-                        <td>{{ product.id }}</td>
                         <td>
-                            <div class="d-flex align-items-center">
-                                {% if product.main_image %}
-                                <img src="{{ product.main_image }}" alt="" style="width: 40px; height: 40px; object-fit: cover;" class="me-2 rounded">
-                                {% else %}
-                                <div class="bg-secondary text-white d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
-                                    <i class="bi bi-image"></i>
+                            <span class="text-muted">#{{ loop.index + (pagination.page - 1) * pagination.per_page }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #4f46e5, #818cf8); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="bi bi-box-seam text-white"></i>
                                 </div>
-                                {% endif %}
                                 <div>
-                                    <div>{{ product.name }}</div>
-                                    <small class="text-muted">{{ product.sku_code }}</small>
+                                    <div class="fw-medium">{{ product.title }}</div>
+                                    <div class="text-muted small">ID: {{ product.product_id }}</div>
                                 </div>
                             </div>
                         </td>
-                        <td>{{ product.category.name if product.category else '-' }}</td>
                         <td>
-                            <div>¥{{ product.sale_price or '0.00' }}</div>
-                            {% if product.original_price and product.original_price > product.sale_price %}
-                            <small class="text-muted text-decoration-line-through">¥{{ product.original_price }}</small>
-                            {% endif %}
+                            <div class="fw-bold text-success">¥{{ product.min_price }}</div>
                         </td>
                         <td>
-                            {% set stock = product.get_current_stock() %}
-                            <span class="{{ 'text-danger' if stock == 0 else ('text-warning' if stock <= 10 else '') }}">
-                                {{ stock }}
-                            </span>
-                        </td>
-                        <td>{{ product.sales_count }}</td>
-                        <td>
-                            {% if product.status == 'active' %}
-                                <span class="badge bg-success">上架</span>
-                            {% elif product.status == 'inactive' %}
-                                <span class="badge bg-secondary">下架</span>
+                            {% if product.status == 5 %}
+                            <span class="badge bg-success">已上架</span>
+                            {% elif product.status == 2 %}
+                            <span class="badge bg-warning">待审核</span>
+                            {% elif product.status == 7 %}
+                            <span class="badge bg-info">上传中</span>
                             {% else %}
-                                <span class="badge bg-danger">缺货</span>
+                            <span class="badge bg-secondary">未知</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if product.is_hot %}<span class="badge bg-danger">热</span>{% endif %}
-                            {% if product.is_new %}<span class="badge bg-primary">新</span>{% endif %}
-                            {% if product.is_recommend %}<span class="badge bg-info">荐</span>{% endif %}
-                        </td>
-                        <td>
-                            <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-sm btn-outline-primary table-action-btn">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a href="{{ url_for('product_edit', product_id=product.id) }}" class="btn btn-sm btn-outline-success table-action-btn">
-                                <i class="bi bi-pencil"></i>
-                            </a>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" title="查看" onclick="viewProduct('{{ product.product_id }}')">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" title="删除" onclick="deleteProduct('{{ product.product_id }}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="9" class="text-center py-4 text-muted">
-                            暂无商品数据
+                        <td colspan="5" class="text-center py-5">
+                            <i class="bi bi-inbox d-block text-muted" style="font-size: 48px;"></i>
+                            <p class="text-muted mt-3">暂无微信小店商品</p>
+                            <a href="{{ url_for('ai_listing_page') }}" class="btn btn-success mt-2">
+                                <i class="bi bi-plus-lg me-1"></i>立即上架
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-
+        
         <!-- 分页 -->
         {% if pagination.pages > 1 %}
-        <nav>
-            <ul class="pagination justify-content-center">
-                {% if pagination.has_prev %}
+        <div class="card-footer bg-transparent py-3">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    {% if pagination.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('products', page=pagination.prev_num, search=search, status=status, category_id=category_id) }}">上一页</a>
+                        <a class="page-link" href="{{ url_for('products', page=pagination.prev_num, search=search) }}">上一页</a>
                     </li>
-                {% endif %}
-                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-                    {% if page_num %}
-                        <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
-                            <a class="page-link" href="{{ url_for('products', page=page_num, search=search, status=status, category_id=category_id) }}">{{ page_num }}</a>
-                        </li>
                     {% endif %}
-                {% endfor %}
-                {% if pagination.has_next %}
+                    
+                    {% for p in range(1, pagination.pages + 1) %}
+                        {% if p >= pagination.page - 2 and p <= pagination.page + 2 %}
+                        <li class="page-item {{ 'active' if p == pagination.page else '' }}">
+                            <a class="page-link" href="{{ url_for('products', page=p, search=search) }}">{{ p }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if pagination.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('products', page=pagination.next_num, search=search, status=status, category_id=category_id) }}">下一页</a>
+                        <a class="page-link" href="{{ url_for('products', page=pagination.next_num, search=search) }}">下一页</a>
                     </li>
-                {% endif %}
-            </ul>
-        </nav>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
         {% endif %}
     </div>
 </div>
+
+<!-- 商品详情Modal -->
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">商品详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="productDetail">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewProduct(productId) {
+    // 显示Modal
+    var myModal = new bootstrap.Modal(document.getElementById('productModal'));
+    myModal.show();
+    
+    document.getElementById('productDetail').innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
+    
+    // 获取商品详情
+    fetch('/api/shop/products/' + productId)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const p = data.data;
+            document.getElementById('productDetail').innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <div style="width: 100%; height: 200px; background: linear-gradient(135deg, #4f46e5, #818cf8); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-box-seam text-white" style="font-size: 64px;"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>${p.title || '未命名'}</h5>
+                        <p class="text-muted">商品ID: ${p.product_id}</p>
+                        <p class="text-success fw-bold fs-4">¥${(p.min_price || 0) / 100}</p>
+                        <p class="text-muted">销量: ${p.total_sold_num || 0}</p>
+                    </div>
+                </div>
+            `;
+        } else {
+            document.getElementById('productDetail').innerHTML = '<div class="alert alert-danger">获取失败: ' + (data.error || '未知错误') + '</div>';
+        }
+    })
+    .catch(error => {
+        document.getElementById('productDetail').innerHTML = '<div class="alert alert-danger">请求失败: ' + error + '</div>';
+    });
+}
+
+function deleteProduct(productId) {
+    if (confirm('确定要删除此商品吗？')) {
+        alert('删除功能开发中...');
+    }
+}
+</script>
 {% endblock %}

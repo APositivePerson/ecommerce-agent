@@ -5,54 +5,54 @@
 {% block content %}
 <!-- 统计卡片 -->
 <div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card stat-card bg-primary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-0">用户总数</h6>
-                        <h2 class="mb-0">{{ stats.user_count }}</h2>
-                    </div>
-                    <i class="bi bi-people fs-1 opacity-50"></i>
+    <div class="col-md-3 animate-fade-in delay-1">
+        <div class="stat-card bg-primary">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">{{ stats.user_count }}</div>
+                    <div class="stat-label">用户总数</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-people"></i>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card stat-card bg-success text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-0">店铺总数</h6>
-                        <h2 class="mb-0">{{ stats.store_count }}</h2>
-                    </div>
-                    <i class="bi bi-shop fs-1 opacity-50"></i>
+    <div class="col-md-3 animate-fade-in delay-2">
+        <div class="stat-card bg-success">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">{{ stats.store_count }}</div>
+                    <div class="stat-label">店铺总数</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-shop"></i>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card stat-card bg-info text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-0">商品总数</h6>
-                        <h2 class="mb-0">{{ stats.product_count }}</h2>
-                    </div>
-                    <i class="bi bi-box fs-1 opacity-50"></i>
+    <div class="col-md-3 animate-fade-in delay-3">
+        <div class="stat-card bg-info">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">{{ stats.product_count }}</div>
+                    <div class="stat-label">商品总数</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-box"></i>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card stat-card bg-warning text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-0">库存记录</h6>
-                        <h2 class="mb-0">{{ stats.inventory_count }}</h2>
-                    </div>
-                    <i class="bi bi-box-seam fs-1 opacity-50"></i>
+    <div class="col-md-3 animate-fade-in delay-4">
+        <div class="stat-card bg-warning">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-value">{{ stats.inventory_count }}</div>
+                    <div class="stat-label">库存记录</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="bi bi-box-seam"></i>
                 </div>
             </div>
         </div>
@@ -61,16 +61,16 @@
 
 <div class="row">
     <!-- 低库存预警 -->
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-exclamation-triangle text-warning"></i> 低库存预警</span>
+    <div class="col-md-6 mb-4">
+        <div class="card animate-fade-in">
+            <div class="card-header">
+                <span><i class="bi bi-exclamation-triangle text-warning me-2"></i>低库存预警</span>
                 <a href="{{ url_for('inventory', low_stock=1) }}" class="btn btn-sm btn-outline-primary">查看全部</a>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 {% if low_stock_items %}
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-hover mb-0">
                             <thead>
                                 <tr>
                                     <th>商品</th>
@@ -82,9 +82,11 @@
                             <tbody>
                                 {% for item in low_stock_items[:5] %}
                                 <tr>
-                                    <td>{{ item.product.name if item.product else '-' }}</td>
-                                    <td>{{ item.product.sku_code if item.product else '-' }}</td>
-                                    <td class="text-danger fw-bold">{{ item.quantity }}</td>
+                                    <td>
+                                        <div class="fw-medium">{{ item.product.name if item.product else '-' }}</div>
+                                    </td>
+                                    <td><code class="small">{{ item.product.sku_code if item.product else '-' }}</code></td>
+                                    <td><span class="badge bg-danger">{{ item.quantity }}</span></td>
                                     <td>{{ item.warning_threshold }}</td>
                                 </tr>
                                 {% endfor %}
@@ -92,22 +94,25 @@
                         </table>
                     </div>
                 {% else %}
-                    <p class="text-muted text-center py-4">暂无低库存商品</p>
+                    <div class="text-center py-5">
+                        <i class="bi bi-check-circle text-success" style="font-size: 48px;"></i>
+                        <p class="text-muted mt-3">暂无低库存商品</p>
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
     <!-- 最近违规记录 -->
-    <div class="col-md-6">
-        <div class="card">
+    <div class="col-md-6 mb-4">
+        <div class="card animate-fade-in">
             <div class="card-header">
-                <span><i class="bi bi-shield-x text-danger"></i> 最近违规记录</span>
+                <span><i class="bi bi-shield-check text-success me-2"></i>最近违规记录</span>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 {% if recent_violations %}
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-hover mb-0">
                             <thead>
                                 <tr>
                                     <th>店铺</th>
@@ -119,7 +124,7 @@
                             <tbody>
                                 {% for violation in recent_violations %}
                                 <tr>
-                                    <td>{{ violation.store.name if violation.store else '-' }}</td>
+                                    <td class="fw-medium">{{ violation.store.name if violation.store else '-' }}</td>
                                     <td>{{ violation.violation_type }}</td>
                                     <td>
                                         {% if violation.status == 'pending' %}
@@ -130,14 +135,17 @@
                                             <span class="badge bg-secondary">已忽略</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ violation.reported_at.strftime('%Y-%m-%d') if violation.reported_at else '-' }}</td>
+                                    <td class="text-muted">{{ violation.reported_at.strftime('%Y-%m-%d') if violation.reported_at else '-' }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 {% else %}
-                    <p class="text-muted text-center py-4">暂无违规记录</p>
+                    <div class="text-center py-5">
+                        <i class="bi bi-shield-check text-success" style="font-size: 48px;"></i>
+                        <p class="text-muted mt-3">暂无违规记录</p>
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -145,32 +153,48 @@
 </div>
 
 <!-- 快捷操作 -->
-<div class="row mt-4">
+<div class="row">
     <div class="col-12">
-        <div class="card">
+        <div class="card animate-fade-in">
             <div class="card-header">
-                <i class="bi bi-lightning-charge"></i> 快捷操作
+                <i class="bi bi-lightning-charge text-warning me-2"></i>快捷操作
             </div>
             <div class="card-body">
-                <div class="row">
+                <div class="row g-3">
                     <div class="col-md-3">
-                        <a href="{{ url_for('user_new') }}" class="btn btn-outline-primary w-100 mb-2">
-                            <i class="bi bi-person-plus"></i> 新建用户
+                        <a href="{{ url_for('user_new') }}" class="quick-action-card text-decoration-none">
+                            <div class="icon bg-primary bg-opacity-10 text-primary">
+                                <i class="bi bi-person-plus"></i>
+                            </div>
+                            <div class="fw-medium">新建用户</div>
+                            <small class="text-muted">添加系统用户</small>
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="{{ url_for('store_new') }}" class="btn btn-outline-success w-100 mb-2">
-                            <i class="bi bi-shop"></i> 新建店铺
+                        <a href="{{ url_for('store_new') }}" class="quick-action-card text-decoration-none">
+                            <div class="icon bg-success bg-opacity-10 text-success">
+                                <i class="bi bi-shop"></i>
+                            </div>
+                            <div class="fw-medium">新建店铺</div>
+                            <small class="text-muted">添加店铺信息</small>
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="{{ url_for('inventory_adjust') }}" class="btn btn-outline-info w-100 mb-2">
-                            <i class="bi bi-box-seam"></i> 库存调整
+                        <a href="{{ url_for('inventory_adjust') }}" class="quick-action-card text-decoration-none">
+                            <div class="icon bg-info bg-opacity-10 text-info">
+                                <i class="bi bi-box-seam"></i>
+                            </div>
+                            <div class="fw-medium">库存调整</div>
+                            <small class="text-muted">管理库存记录</small>
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="{{ url_for('stores') }}" class="btn btn-outline-warning w-100 mb-2">
-                            <i class="bi bi-activity"></i> 店铺健康度
+                        <a href="{{ url_for('stores') }}" class="quick-action-card text-decoration-none">
+                            <div class="icon bg-warning bg-opacity-10 text-warning">
+                                <i class="bi bi-activity"></i>
+                            </div>
+                            <div class="fw-medium">店铺健康度</div>
+                            <small class="text-muted">查看店铺状态</small>
                         </a>
                     </div>
                 </div>
