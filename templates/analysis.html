@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block page_title %}店铺数据分析{% endblock %}
+
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h4 class="mb-0"><i class="bi bi-graph-up me-2"></i>店铺商品分析</h4>
+            </div>
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            height: 100%;
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        .suggestion-card {
+            background: #fffbe6;
+            border-left: 4px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .product-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h4 class="mb-0"><i class="bi bi-graph-up me-2"></i>店铺商品分析</h4>
+            </div>
+            
+            <div class="card-body">
+                <!-- 核心指标 -->
+                <h5 class="mb-3"><i class="bi bi-speedometer2 me-2"></i>核心指标</h5>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ total }}</div>
+                            <div class="stat-label">商品总数</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-number" style="color: #07c160;">{{ on_sale }}</div>
+                            <div class="stat-label">已上架</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-number" style="color: #ff4d4f;">{{ off_sale }}</div>
+                            <div class="stat-label">未上架</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ total_sold }}</div>
+                            <div class="stat-label">总销量</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 价格分析 -->
+                <h5 class="mb-3"><i class="bi bi-currency-dollar me-2"></i>价格分析</h5>
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-number">¥{{ min_price }}</div>
+                            <div class="stat-label">最低价</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-number">¥{{ avg_price }}</div>
+                            <div class="stat-label">平均价</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-number">¥{{ max_price }}</div>
+                            <div class="stat-label">最高价</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 销量排行 -->
+                <h5 class="mb-3"><i class="bi bi-trophy me-2"></i>销量排行 TOP5</h5>
+                <div class="table-responsive mb-4">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>商品</th>
+                                <th>价格</th>
+                                <th>销量</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in sales_rank %}
+                            <tr>
+                                <td><span class="badge bg-{{ 'success' if loop.index <= 3 else 'secondary' }}">{{ loop.index }}</span></td>
+                                <td>
+                                    <img src="{{ p.head_imgs[0] if p.head_imgs else '' }}" class="product-img me-2" onerror="this.style.display='none'">
+                                    {{ p.title[:30] }}{{ '...' if p.title|length > 30 else '' }}
+                                </td>
+                                <td>¥{{ (p.min_price or 0) / 100 }}</td>
+                                <td>{{ p.total_sold_num or 0 }}</td>
+                                <td>
+                                    {% if p.status == 5 %}
+                                    <span class="badge bg-success">在售</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">未上架</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center text-muted">暂无数据</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 分类统计 -->
+                <h5 class="mb-3"><i class="bi bi-tags me-2"></i>分类分布</h5>
+                <div class="row mb-4">
+                    {% for cat_id, count in cat_count.items() %}
+                    <div class="col-md-2 col-4">
+                        <div class="stat-card py-3">
+                            <div class="stat-number" style="font-size: 1.5rem;">{{ count }}</div>
+                            <div class="stat-label">分类 {{ cat_id }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12 text-muted">暂无分类数据</div>
+                    {% endfor %}
+                </div>
+                
+                <!-- 优化建议 -->
+                <h5 class="mb-3"><i class="bi bi-lightbulb me-2"></i>优化建议</h5>
+                {% if suggestions %}
+                    {% for s in suggestions %}
+                    <div class="suggestion-card">{{ s }}</div>
+                    {% endfor %}
+                {% else %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>店铺运营良好，暂无优化建议！
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

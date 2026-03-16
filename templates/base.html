@@ -409,6 +409,9 @@
             <a class="nav-link {{ 'active' if request.endpoint == 'products' or request.endpoint == 'product_detail' }}" href="{{ url_for('products') }}">
                 <i class="bi bi-box"></i> 商品列表
             </a>
+            <a class="nav-link {{ 'active' if 'analysis' in request.endpoint }}" href="{{ url_for('product_analysis') }}">
+                <i class="bi bi-graph-up"></i> 数据分析
+            </a>
             <a class="nav-link {{ 'active' if 'ai_listing' in request.endpoint }}" href="{{ url_for('ai_listing_page') }}">
                 <i class="bi bi-stars"></i> AI智能上架
             </a>

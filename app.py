@@ -1194,6 +1194,72 @@ def api_shop_product_listing(product_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route('/analysis')
+def product_analysis():
+    """店铺商品分析页面"""
+    from wechat_shop_api import WechatShopAPI
+    
+    try:
+        api = WechatShopAPI()
+        products = api.get_all_products()
+        
+        # 基础统计
+        total = len(products)
+        on_sale = sum(1 for p in products if p.get('status') == 5)
+        off_sale = total - on_sale
+        total_sold = sum(p.get('total_sold_num', 0) for p in products)
+        
+        # 价格分析
+        prices = []
+        for p in products:
+            for sku in p.get('skus', []):
+                prices.append(sku.get('sale_price', 0) / 100)
+        
+        avg_price = sum(prices) / len(prices) if prices else 0
+        min_price = min(prices) if prices else 0
+        max_price = max(prices) if prices else 0
+        
+        # 销量排行
+        sales_rank = sorted(products, key=lambda x: x.get('total_sold_num', 0), reverse=True)[:5]
+        
+        # 分类统计
+        cat_count = {}
+        for p in products:
+            for cat in p.get('cats', []):
+                cat_id = cat.get('cat_id', 'unknown')
+                cat_count[cat_id] = cat_count.get(cat_id, 0) + 1
+        
+        # 待优化商品（销量低 + 未上架）
+        need_attention = [p for p in products if p.get('total_sold_num', 0) == 0 and p.get('status') != 5]
+        
+        # 建议
+        suggestions = []
+        if on_sale < total * 0.5:
+            suggestions.append(f"⚠️ 上架率偏低 ({on_sale}/{total})，建议检查未上架商品")
+        if total_sold == 0:
+            suggestions.append("📢 所有商品销量为0，建议优化商品信息或调整价格")
+        if len(products) < 5:
+            suggestions.append("📝 商品数量较少，建议增加SKU")
+        for p in need_attention:
+            suggestions.append(f"🔍 商品 '{p.get('title', '未命名')[:20]}' 销量为0，建议优化或下架")
+        
+        return render_template('analysis.html',
+                             total=total,
+                             on_sale=on_sale,
+                             off_sale=off_sale,
+                             total_sold=total_sold,
+                             avg_price=round(avg_price, 2),
+                             min_price=min_price,
+                             max_price=max_price,
+                             sales_rank=sales_rank,
+                             cat_count=cat_count,
+                             suggestions=suggestions,
+                             products=products)
+    
+    except Exception as e:
+        return f"分析失败: {str(e)}"
+
+
 @app.route('/all_products')
 def all_products():
     """综合商品页面 - 本地商品 + 微信小店商品"""
