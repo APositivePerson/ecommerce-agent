@@ -100,3 +100,42 @@ def get_product_detail(product_id):
             "success": False,
             "error": str(e)
         }), 500
+
+
+@shop_bp.route('/products/<product_id>/listing', methods=['POST'])
+def update_product_listing(product_id):
+    """
+    上架/下架商品
+    
+    POST参数:
+        status: 2=上架, 3=下架
+        
+    Returns:
+        {
+            "success": true,
+            "message": "商品已下架"
+        }
+    """
+    try:
+        data = request.get_json() or {}
+        status = data.get('status', 3)  # 默认下架
+        
+        result = shop_api.list_product(product_id, status)
+        
+        if result.get("errcode") != 0:
+            return jsonify({
+                "success": False,
+                "error": result.get("errmsg", "操作失败")
+            }), 400
+        
+        action = "上架" if status == 2 else "下架"
+        return jsonify({
+            "success": True,
+            "message": f"商品已{action}"
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500

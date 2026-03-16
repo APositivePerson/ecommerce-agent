@@ -1170,6 +1170,30 @@ def api_shop_product_detail(product_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route('/api/shop/products/<product_id>/listing', methods=['POST'])
+def api_shop_product_listing(product_id):
+    """上架/下架商品"""
+    try:
+        data = request.get_json() or {}
+        status = data.get('status', 3)  # 默认下架
+
+        if status == 2:
+            # 上架
+            result = shop_api.list_product(product_id, status)
+        else:
+            # 下架 - 用 delisting 接口
+            result = shop_api.delist_product(product_id)
+
+        if result.get("errcode") != 0:
+            return jsonify({"success": False, "error": result.get("errmsg", "操作失败")}), 400
+
+        action = "上架" if status == 2 else "下架"
+        return jsonify({"success": True, "message": f"商品已{action}"})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route('/all_products')
 def all_products():
     """综合商品页面 - 本地商品 + 微信小店商品"""

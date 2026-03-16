@@ -72,12 +72,14 @@
                         <td>
                             {% if product.status == 5 %}
                             <span class="badge bg-success">已上架</span>
+                            {% elif product.status == 3 %}
+                            <span class="badge bg-secondary">已下架</span>
                             {% elif product.status == 2 %}
                             <span class="badge bg-warning">待审核</span>
                             {% elif product.status == 7 %}
                             <span class="badge bg-info">上传中</span>
                             {% else %}
-                            <span class="badge bg-secondary">未知</span>
+                            <span class="badge bg-secondary">已下架</span>
                             {% endif %}
                         </td>
                         <td>
@@ -85,9 +87,15 @@
                                 <button class="btn btn-outline-primary" title="查看" onclick="viewProduct('{{ product.product_id }}')">
                                     <i class="bi bi-eye"></i>
                                 </button>
-                                <button class="btn btn-outline-danger" title="删除" onclick="deleteProduct('{{ product.product_id }}')">
-                                    <i class="bi bi-trash"></i>
+                                {% if product.status == 5 %}
+                                <button class="btn btn-outline-warning" title="下架" onclick="delistProduct('{{ product.product_id }}')">
+                                    <i class="bi bi-pause-circle"></i>
                                 </button>
+                                {% else %}
+                                <button class="btn btn-outline-success" title="上架" onclick="listProduct('{{ product.product_id }}')">
+                                    <i class="bi bi-play-circle"></i>
+                                </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -192,10 +200,48 @@ function viewProduct(productId) {
     });
 }
 
-function deleteProduct(productId) {
-    if (confirm('确定要删除此商品吗？')) {
-        alert('删除功能开发中...');
-    }
+function delistProduct(productId) {
+    if (!confirm('确定要下架此商品吗？')) return;
+    
+    fetch('/api/shop/products/' + productId + '/listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 3 })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ ' + data.message);
+            location.reload();
+        } else {
+            alert('❌ 下架失败: ' + (data.error || '未知错误'));
+        }
+    })
+    .catch(error => {
+        alert('❌ 请求失败: ' + error);
+    });
+}
+
+function listProduct(productId) {
+    if (!confirm('确定要上架此商品吗？')) return;
+    
+    fetch('/api/shop/products/' + productId + '/listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 2 })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ ' + data.message);
+            location.reload();
+        } else {
+            alert('❌ 上架失败: ' + (data.error || '未知错误'));
+        }
+    })
+    .catch(error => {
+        alert('❌ 请求失败: ' + error);
+    });
 }
 </script>
 {% endblock %}

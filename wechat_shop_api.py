@@ -17,13 +17,13 @@ class WechatShopAPI:
         self.token_expire_time = None
     
     def _get_access_token(self) -> str:
-        """获取access_token，带缓存"""
+        """获取access_token，使用 getStableAccessToken"""
         # 如果token未过期，直接返回
         if self.access_token and self.token_expire_time and datetime.now() < self.token_expire_time:
             return self.access_token
         
-        # 重新获取token
-        url = f"https://api.weixin.qq.com/cgi-bin/token"
+        # 使用 getStableAccessToken 获取稳定的 access_token
+        url = "https://api.weixin.qq.com/cgi-bin/stable_token"
         params = {
             "grant_type": "client_credential",
             "appid": self.appid,
@@ -31,7 +31,7 @@ class WechatShopAPI:
         }
         
         try:
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.post(url, json=params, timeout=10)
             data = response.json()
             
             if "access_token" in data:
@@ -168,98 +168,68 @@ class WechatShopAPI:
             "edit_time": product.get("edit_time")
         }
 
-
-# 使用示例
-
-    def create_product(self, product_data: Dict) -> Dict:
-        """创建微信小店商品"""
-        access_token = self._get_access_token()
-        url = f"https://api.weixin.qq.com/wxopen/shop/product/add?access_token={access_token}"
-        
-        try:
-            response = requests.post(url, json=product_data, timeout=30)
-            result = response.json()
-            
-            if result.get("errcode") == 0:
-                return {"errcode": 0, "product_id": result.get("product_id")}
-            else:
-                return {"errcode": result.get("errcode"), "errmsg": result.get("errmsg", "创建失败")}
-        except Exception as e:
-            return {"errcode": -1, "errmsg": str(e)}
-
-if __name__ == "__main__":
-    # 初始化API
-    api = WechatShopAPI()
-    
-    # 获取商品列表
-    print("=== 获取商品列表 ===")
-    result = api.get_product_list(limit=10)
-    print(json.dumps(result, indent=2, ensure_ascii=False))
-    
-    # 如果有商品，获取第一个商品的详情
-    if result.get("errcode") == 0 and result.get("product_ids"):
-        first_id = result["product_ids"][0]
-        print(f"\n=== 获取商品 {first_id} 详情 ===")
-        detail = api.get_product_detail(first_id)
-        
-        if detail.get("errcode") == 0:
-            product = detail.get("product", {})
-            formatted = api.format_product_info(product)
-            print(json.dumps(formatted, indent=2, ensure_ascii=False))
-        else:
-            print(f"获取详情失败: {detail.get('errmsg')}")
-
-    def create_product(self, product_data: Dict) -> Dict:
-        """创建微信小店商品"""
-        access_token = self._get_access_token()
-        url = f"https://api.weixin.qq.com/wxopen/shop/product/add?access_token={access_token}"
-        
-        try:
-            response = requests.post(url, json=product_data, timeout=30)
-            result = response.json()
-            
-            if result.get("errcode") == 0:
-                return {"errcode": 0, "product_id": result.get("product_id")}
-            else:
-                return {"errcode": result.get("errcode"), "errmsg": result.get("errmsg", "创建失败")}
-        except Exception as e:
-            return {"errcode": -1, "errmsg": str(e)}
-
-    def add_product_sku(self, product_data: Dict) -> Dict:
-        """添加商品SKU"""
-        access_token = self._get_access_token()
-        url = f"https://api.weixin.qq.com/wxopen/shop/product/add?access_token={access_token}"
-        
-        try:
-            response = requests.post(url, json=product_data, timeout=30)
-            result = response.json()
-            
-            if result.get("errcode") == 0:
-                return {"errcode": 0, "product_id": result.get("product_id")}
-            else:
-                return {"errcode": result.get("errcode"), "errmsg": result.get("errmsg")}
-        except Exception as e:
-            return {"errcode": -1, "errmsg": str(e)}
-
     def list_product(self, product_id: str, status: int = 2) -> Dict:
-        """上架/下架微信小店商品
-        status: 2=上架, 3=下架
+        """上架商品
+        status: 2=上架
         """
         access_token = self._get_access_token()
         url = f"https://api.weixin.qq.com/channels/ec/product/listing?access_token={access_token}"
-        
+
         data = {
             "product_id": product_id,
             "status": status
         }
-        
+
         try:
             response = requests.post(url, json=data, timeout=30)
             result = response.json()
-            
+
             if result.get("errcode") == 0:
                 return {"errcode": 0, "msg": "success"}
             else:
                 return {"errcode": result.get("errcode"), "errmsg": result.get("errmsg")}
         except Exception as e:
             return {"errcode": -1, "errmsg": str(e)}
+
+    def delist_product(self, product_id: str) -> Dict:
+        """下架商品"""
+        access_token = self._get_access_token()
+        url = f"https://api.weixin.qq.com/channels/ec/product/delisting?access_token={access_token}"
+
+        data = {
+            "product_id": product_id
+        }
+
+        try:
+            response = requests.post(url, json=data, timeout=30)
+            result = response.json()
+
+            if result.get("errcode") == 0:
+                return {"errcode": 0, "msg": "success"}
+            else:
+                return {"errcode": result.get("errcode"), "errmsg": result.get("errmsg")}
+        except Exception as e:
+            return {"errcode": -1, "errmsg": str(e)}
+
+
+if __name__ == "__main__":
+    # 初始化API
+    api = WechatShopAPI()
+
+    # 获取商品列表
+    print("=== 获取商品列表 ===")
+    result = api.get_product_list(limit=10)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+
+    # 如果有商品，获取第一个商品的详情
+    if result.get("errcode") == 0 and result.get("product_ids"):
+        first_id = result["product_ids"][0]
+        print(f"\n=== 获取商品 {first_id} 详情 ===")
+        detail = api.get_product_detail(first_id)
+
+        if detail.get("errcode") == 0:
+            product = detail.get("product", {})
+            formatted = api.format_product_info(product)
+            print(json.dumps(formatted, indent=2, ensure_ascii=False))
+        else:
+            print(f"获取详情失败: {detail.get('errmsg')}")

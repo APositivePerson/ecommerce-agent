@@ -119,6 +119,39 @@
             color: #1890ff;
         }
         
+        .status-3 {
+            background: #fff2f0;
+            color: #ff4d4f;
+        }
+        
+        .product-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .btn-danger {
+            background: #ff4d4f;
+        }
+        
+        .btn-danger:hover {
+            background: #ff7875;
+        }
+        
+        .btn-success {
+            background: #07c160;
+        }
+        
+        .btn-success:hover {
+            background: #06ad56;
+        }
+        
         .loading {
             text-align: center;
             padding: 40px;
@@ -210,12 +243,45 @@
                             <span>¥</span>${p.min_price.toFixed(2)}
                             ${p.max_price > p.min_price ? ` - ¥${p.max_price.toFixed(2)}` : ''}
                         </div>
-                        <span class="product-status status-${p.status}">
-                            ${p.status === 5 ? '在售' : '其他'}
-                        </span>
+                        <div class="product-actions">
+                            <span class="product-status status-${p.status}">
+                                ${p.status === 5 ? '在售' : (p.status === 3 ? '已下架' : '其他')}
+                            </span>
+                            <button class="btn-small ${p.status === 5 ? 'btn-danger' : 'btn-success'}" 
+                                    onclick="toggleListing('${p.product_id}', ${p.status})">
+                                ${p.status === 5 ? '下架' : '上架'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             `).join('');
+        }
+        
+        // 上架/下架商品
+        async function toggleListing(productId, currentStatus) {
+            const newStatus = currentStatus === 5 ? 3 : 2;  // 5=在售->下架(3), 其他->上架(2)
+            const action = newStatus === 2 ? '上架' : '下架';
+            
+            if (!confirm(`确定要${action}该商品吗？`)) return;
+            
+            try {
+                const response = await fetch(`/api/shop/products/${productId}/listing`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    loadProducts();  // 刷新列表
+                } else {
+                    alert('操作失败: ' + result.error);
+                }
+            } catch (error) {
+                alert('请求失败: ' + error.message);
+            }
         }
         
         // 同步商品到数据库
