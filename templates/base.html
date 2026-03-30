@@ -418,6 +418,11 @@
             <a class="nav-link {{ 'active' if 'categories' in request.endpoint }}" href="{{ url_for('categories') }}">
                 <i class="bi bi-tags"></i> 分类管理
             </a>
+            
+            <div class="menu-section">智能决策</div>
+            <a class="nav-link {{ 'active' if 'strategy' in request.endpoint }}" href="{{ url_for('strategy.strategy_page') }}">
+                <i class="bi bi-lightbulb-fill"></i> 决策助手
+            </a>
         </nav>
     </div>
 

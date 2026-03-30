@@ -54,3 +54,11 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+
+# Instance (contains database and local config)
+instance/
+
+# Competitor analysis data (generated files)
+competitor_analysis/*.json
+competitor_analysis/*.png
+competitor_analysis/*.md

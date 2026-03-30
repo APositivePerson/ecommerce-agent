@@ -19,67 +19,136 @@
                 </div>
             </div>
             <div class="card-body px-4 pb-4">
-                <!-- 输入框 -->
-                <div class="input-group mb-4" style="border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.15);">
-                    <span class="input-group-text border-0" style="background: linear-gradient(135deg, #4f46e5, #818cf8); color: white; padding-left: 20px;">
-                        <i class="bi bi-lightbulb"></i>
-                    </span>
-                    <input type="text" class="form-control form-control-lg border-0" id="productText" 
-                           placeholder="例如：K9猫罐头85g，价格15元"
-                           style="border-radius: 0 16px 16px 0;">
-                    <button class="btn btn-primary px-4" onclick="submitListing()" style="border-radius: 0 16px 16px 0;">
-                        <i class="bi bi-magic me-2"></i>立即上架
-                    </button>
+                <!-- 商品基本信息 -->
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <label class="form-label fw-medium">商品名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="productName" 
+                               placeholder="例如：N1水蜜桃味猫砂17.5">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-medium">售价(元) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="productPrice" 
+                               placeholder="例如：70">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-medium">原价(元)</label>
+                        <input type="number" class="form-control" id="productOriginalPrice" 
+                               placeholder="例如：99">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-medium">商品编码(SKU) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="productSkuCode" 
+                               placeholder="例如：YPN1003">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">品牌</label>
+                        <input type="text" class="form-control" id="productBrand" 
+                               placeholder="例如：N1">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">库存</label>
+                        <input type="number" class="form-control" id="productStock" 
+                               value="100">
+                    </div>
+                </div>
+                
+                <!-- 主图上传 -->
+                <div class="mb-4">
+                    <label class="form-label fw-medium">
+                        主图 <span class="text-danger">*</span>
+                        <span class="text-muted fw-normal">(至少3张，最多9张)</span>
+                    </label>
+                    <div class="border rounded-3 p-3" style="background: #fafafa;">
+                        <div class="row g-2" id="mainImagesPreview">
+                            <!-- 预览区域 -->
+                        </div>
+                        <div class="mt-3">
+                            <div class="btn-group">
+                                <label class="btn btn-outline-primary btn-sm mb-0">
+                                    <i class="bi bi-upload me-1"></i>本地上传
+                                    <input type="file" id="mainImageInput" accept="image/*" multiple style="display: none;" 
+                                           onchange="handleMainImageUpload(this)">
+                                </label>
+                                <button class="btn btn-outline-success btn-sm mb-0" onclick="generateMainImage()">
+                                    <i class="bi bi-magic me-1"></i>AI生成主图
+                                </button>
+                            </div>
+                            <button class="btn btn-link btn-sm text-muted" onclick="useTemplateImages()">
+                                使用模板图
+                            </button>
+                        </div>
+                        <input type="hidden" id="mainImages" value="[]">
+                    </div>
+                </div>
+                
+                <!-- 详情图上传 -->
+                <div class="mb-4">
+                    <label class="form-label fw-medium">
+                        详情图
+                        <span class="text-muted fw-normal">(至少1张，最多20张)</span>
+                    </label>
+                    <div class="border rounded-3 p-3" style="background: #fafafa;">
+                        <div class="row g-2" id="detailImagesPreview">
+                            <!-- 预览区域 -->
+                        </div>
+                        <div class="mt-3">
+                            <div class="btn-group">
+                                <label class="btn btn-outline-primary btn-sm mb-0">
+                                    <i class="bi bi-upload me-1"></i>本地上传
+                                    <input type="file" id="detailImageInput" accept="image/*" multiple style="display: none;" 
+                                           onchange="handleDetailImageUpload(this)">
+                                </label>
+                                <button class="btn btn-outline-success btn-sm mb-0" onclick="generateDetailImage()">
+                                    <i class="bi bi-magic me-1"></i>AI生成详情图
+                                </button>
+                            </div>
+                            <button class="btn btn-link btn-sm text-muted" onclick="useTemplateDetailImages()">
+                                使用模板图
+                            </button>
+                        </div>
+                        <input type="hidden" id="detailImages" value="[]">
+                    </div>
                 </div>
                 
                 <!-- 快速示例 -->
                 <div class="mb-4">
                     <div class="d-flex align-items-center mb-3">
                         <i class="bi bi-stars text-warning me-2"></i>
-                        <span class="text-muted fw-medium">快速示例（点击使用）：</span>
+                        <span class="text-muted fw-medium">快速示例（点击填充）：</span>
                     </div>
                     <div class="row g-2">
                         <div class="col-md-6">
-                            <div class="example-item p-3 rounded-3 bg-light-hover" onclick="useExample('K9猫罐头85g，价格15元')" 
+                            <div class="example-item p-3 rounded-3 bg-light-hover" onclick="fillExample(1)" 
                                  style="cursor: pointer; border: 1px solid #e2e8f0; transition: all 0.3s;">
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="bi bi-paw text-primary"></i>
-                                    <span class="small">K9猫罐头85g，价格15元</span>
+                                    <span class="small">N1水蜜桃味猫砂 / 70元 / YPN1003</span>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="example-item p-3 rounded-3 bg-light-hover" onclick="useExample('皇家成猫粮2kg，价格120元')" 
+                            <div class="example-item p-3 rounded-3 bg-light-hover" onclick="fillExample(2)" 
                                  style="cursor: pointer; border: 1px solid #e2e8f0; transition: all 0.3s;">
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="bi bi-paw text-success"></i>
-                                    <span class="small">皇家成猫粮2kg，价格120元</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="example-item p-3 rounded-3 bg-light-hover" onclick="useExample('N1豆腐猫砂2.5kg，价格25元')" 
-                                 style="cursor: pointer; border: 1px solid #e2e8f0; transition: all 0.3s;">
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="bi bi-inbox text-info"></i>
-                                    <span class="small">N1豆腐猫砂2.5kg，价格25元</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="example-item p-3 rounded-3 bg-light-hover" onclick="useExample('红狗化毛膏120g，价格35元')" 
-                                 style="cursor: pointer; border: 1px solid #e2e8f0; transition: all 0.3s;">
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="bi bi-heart-pulse text-danger"></i>
-                                    <span class="small">红狗化毛膏120g，价格35元</span>
+                                    <span class="small">N1钠基原矿猫砂 / 42元 / 2159035001</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
+                <!-- 提交按钮 -->
+                <div class="d-grid">
+                    <button class="btn btn-primary btn-lg" onclick="submitListing()" 
+                            style="border-radius: 12px; background: linear-gradient(135deg, #4f46e5, #818cf8);">
+                        <i class="bi bi-magic me-2"></i>立即上架
+                    </button>
+                </div>
+                
                 <!-- 结果显示 -->
-                <div id="resultArea" style="display: none;">
+                <div id="resultArea" style="display: none;" class="mt-4">
                     <div class="alert d-flex align-items-center" role="alert" id="resultAlert">
                         <i class="bi me-2" id="resultIcon"></i>
                         <div>
@@ -99,33 +168,33 @@
             </div>
         </div>
         
-        <!-- 使用说明 -->
-        <div class="card mt-4 border-0 animate-fade-in">
+        <!-- AI图片生成设置 -->
+        <div class="card mt-4 border-0">
             <div class="card-header bg-transparent">
-                <i class="bi bi-question-circle text-primary me-2"></i>使用说明
+                <i class="bi bi-robot text-primary me-2"></i>AI图片生成设置
             </div>
             <div class="card-body">
-                <div class="row g-4">
-                    <div class="col-md-4 text-center">
-                        <div class="step-icon mb-3" style="width: 48px; height: 48px; background: #e0e7ff; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                            <span class="fw-bold text-primary">1</span>
-                        </div>
-                        <h6>输入商品信息</h6>
-                        <p class="text-muted small mb-0">输入商品名称和价格</p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">AI服务</label>
+                        <select class="form-select" id="aiService">
+                            <option value="pollinations">Pollinations.ai (免费)</option>
+                            <option value="dalle">DALL-E (需API Key)</option>
+                        </select>
                     </div>
-                    <div class="col-md-4 text-center">
-                        <div class="step-icon mb-3" style="width: 48px; height: 48px; background: #dcfce7; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                            <span class="fw-bold text-success">2</span>
-                        </div>
-                        <h6>AI自动识别</h6>
-                        <p class="text-muted small mb-0">自动匹配商品类目</p>
+                    <div class="col-md-6">
+                        <label class="form-label">图片风格</label>
+                        <select class="form-select" id="imageStyle">
+                            <option value="product">产品摄影</option>
+                            <option value="simple">简洁背景</option>
+                            <option value="lifestyle">生活场景</option>
+                            <option value="3d">3D渲染</option>
+                        </select>
                     </div>
-                    <div class="col-md-4 text-center">
-                        <div class="step-icon mb-3" style="width: 48px; height: 48px; background: #fef3c7; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                            <span class="fw-bold text-warning">3</span>
-                        </div>
-                        <h6>自动上架</h6>
-                        <p class="text-muted small mb-0">自动发布到微信小店</p>
+                    <div class="col-12" id="dalleKeySection" style="display: none;">
+                        <label class="form-label">OpenAI API Key</label>
+                        <input type="password" class="form-control" id="openaiApiKey" 
+                               placeholder="sk-...">
                     </div>
                 </div>
             </div>
@@ -160,47 +229,294 @@
     background: #f1f5f9 !important;
     border-color: #4f46e5 !important;
 }
+.img-thumbnail {
+    object-fit: cover;
+}
 </style>
 
 <script>
-function useExample(text) {
-    document.getElementById('productText').value = text;
+// 示例数据
+const examples = {
+    1: {
+        name: 'N1水蜜桃味猫砂17.5',
+        price: 70,
+        originalPrice: 99,
+        skuCode: 'YPN1003',
+        brand: 'N1',
+        stock: 100
+    },
+    2: {
+        name: 'N1爱宠爱猫钠基原矿猫砂10lb4.5kg',
+        price: 42,
+        originalPrice: 60,
+        skuCode: '2159035001',
+        brand: 'N1',
+        stock: 100
+    }
+};
+
+function fillExample(id) {
+    const ex = examples[id];
+    document.getElementById('productName').value = ex.name;
+    document.getElementById('productPrice').value = ex.price;
+    document.getElementById('productOriginalPrice').value = ex.originalPrice;
+    document.getElementById('productSkuCode').value = ex.skuCode;
+    document.getElementById('productBrand').value = ex.brand;
+    document.getElementById('productStock').value = ex.stock;
+}
+
+// AI服务切换
+document.getElementById('aiService').addEventListener('change', function() {
+    const keySection = document.getElementById('dalleKeySection');
+    keySection.style.display = this.value === 'dalle' ? 'block' : 'none';
+});
+
+// 处理主图上传
+function handleMainImageUpload(input) {
+    const files = input.files;
+    if (files.length > 0) {
+        uploadImages(files, 'main');
+    }
+}
+
+// 处理详情图上传
+function handleDetailImageUpload(input) {
+    const files = input.files;
+    if (files.length > 0) {
+        uploadImages(files, 'detail');
+    }
+}
+
+// 上传图片到微信服务器
+function uploadImages(files, type) {
+    const formData = new FormData();
+    formData.append('file', files[0]);
+    formData.append('type', type);
+    
+    fetch('/api/uploader/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 添加到预览
+            addImageToPreview(data.url, type);
+            // 更新隐藏输入
+            updateImageInput(type, data.url, 'add');
+        } else {
+            alert('上传失败: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('上传失败: ' + error);
+    });
+}
+
+// 添加图片到预览
+function addImageToPreview(url, type) {
+    const previewArea = document.getElementById(type + 'ImagesPreview');
+    const div = document.createElement('div');
+    div.className = 'col-4 col-md-3';
+    div.innerHTML = `
+        <div class="position-relative">
+            <img src="${url}" class="img-thumbnail w-100" style="height: 80px; object-fit: cover;">
+            <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                    style="top: 2px; right: 2px; padding: 2px 6px;" 
+                    onclick="removeImage(this, '${type}', '${url}')">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    `;
+    previewArea.appendChild(div);
+}
+
+// 移除图片
+function removeImage(btn, type, url) {
+    btn.closest('.col-4').remove();
+    updateImageInput(type, url, 'remove');
+}
+
+// 更新隐藏输入
+function updateImageInput(type, url, action) {
+    const input = document.getElementById(type + 'Images');
+    let images = JSON.parse(input.value || '[]');
+    
+    if (action === 'add') {
+        images.push(url);
+    } else {
+        images = images.filter(img => img !== url);
+    }
+    
+    input.value = JSON.stringify(images);
+}
+
+// 使用模板图
+function useTemplateImages() {
+    // 获取模板图（这里需要后端提供）
+    fetch('/api/uploader/template_images')
+    .then(response => response.json())
+    .then(data => {
+        if (data.images && data.images.length > 0) {
+            const input = document.getElementById('mainImages');
+            const currentImages = JSON.parse(input.value || '[]');
+            const newImages = [...currentImages, ...data.images].slice(0, 9);
+            input.value = JSON.stringify(newImages);
+            
+            // 更新预览
+            const previewArea = document.getElementById('mainImagesPreview');
+            previewArea.innerHTML = '';
+            newImages.forEach(url => {
+                addImageToPreview(url, 'main');
+            });
+        }
+    })
+    .catch(error => {
+        alert('获取模板图失败');
+    });
+}
+
+// 使用模板详情图
+function useTemplateDetailImages() {
+    fetch('/api/uploader/template_images?type=detail')
+    .then(response => response.json())
+    .then(data => {
+        if (data.images && data.images.length > 0) {
+            const input = document.getElementById('detailImages');
+            const currentImages = JSON.parse(input.value || '[]');
+            const newImages = [...currentImages, ...data.images].slice(0, 20);
+            input.value = JSON.stringify(newImages);
+            
+            const previewArea = document.getElementById('detailImagesPreview');
+            previewArea.innerHTML = '';
+            newImages.forEach(url => {
+                addImageToPreview(url, 'detail');
+            });
+        }
+    })
+    .catch(error => {
+        alert('获取模板图失败');
+    });
+}
+
+// AI生成主图
+function generateMainImage() {
+    const productName = document.getElementById('productName').value;
+    if (!productName) {
+        alert('请先输入商品名称');
+        return;
+    }
+    
+    const aiService = document.getElementById('aiService').value;
+    const style = document.getElementById('imageStyle').value;
+    
+    document.getElementById('loadingArea').style.display = 'block';
+    
+    fetch('/api/uploader/ai_generate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            prompt: productName,
+            type: 'main',
+            service: aiService,
+            style: style,
+            apiKey: document.getElementById('openaiApiKey').value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('loadingArea').style.display = 'none';
+        if (data.success && data.images) {
+            data.images.forEach(url => {
+                addImageToPreview(url, 'main');
+                updateImageInput(type, url, 'add');
+            });
+        } else {
+            alert(data.message || '生成失败');
+        }
+    })
+    .catch(error => {
+        document.getElementById('loadingArea').style.display = 'none';
+        alert('生成失败: ' + error);
+    });
+}
+
+// AI生成详情图
+function generateDetailImage() {
+    const productName = document.getElementById('productName').value;
+    if (!productName) {
+        alert('请先输入商品名称');
+        return;
+    }
+    
+    const aiService = document.getElementById('aiService').value;
+    const style = document.getElementById('imageStyle').value;
+    
+    document.getElementById('loadingArea').style.display = 'block';
+    
+    fetch('/api/uploader/ai_generate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            prompt: productName,
+            type: 'detail',
+            service: aiService,
+            style: style,
+            apiKey: document.getElementById('openaiApiKey').value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('loadingArea').style.display = 'none';
+        if (data.success && data.images) {
+            data.images.forEach(url => {
+                addImageToPreview(url, 'detail');
+                updateImageInput('detail', url, 'add');
+            });
+        } else {
+            alert(data.message || '生成失败');
+        }
+    })
+    .catch(error => {
+        document.getElementById('loadingArea').style.display = 'none';
+        alert('生成失败: ' + error);
+    });
 }
 
 function submitListing() {
-    const productText = document.getElementById('productText').value.trim();
-    if (!productText) {
-        alert('请输入商品信息');
+    const name = document.getElementById('productName').value.trim();
+    const price = parseFloat(document.getElementById('productPrice').value);
+    const originalPrice = parseFloat(document.getElementById('productOriginalPrice').value) || null;
+    const skuCode = document.getElementById('productSkuCode').value.trim();
+    const brand = document.getElementById('productBrand').value.trim();
+    const stock = parseInt(document.getElementById('productStock').value) || 100;
+    const mainImages = JSON.parse(document.getElementById('mainImages').value || '[]');
+    const detailImages = JSON.parse(document.getElementById('detailImages').value || '[]');
+    
+    // 调试信息
+    console.log('mainImages:', mainImages);
+    console.log('detailImages:', detailImages);
+    
+    if (!name) {
+        alert('请输入商品名称');
+        return;
+    }
+    if (!price || price <= 0) {
+        alert('请输入售价');
+        return;
+    }
+    if (!skuCode) {
+        alert('请输入商品编码(SKU)');
+        return;
+    }
+    if (mainImages.length < 3) {
+        alert('请至少上传3张主图');
         return;
     }
     
     // 显示加载动画
     document.getElementById('loadingArea').style.display = 'block';
     document.getElementById('resultArea').style.display = 'none';
-    
-    // 解析商品信息
-    let name = productText;
-    let price = 0;
-    
-    // 提取价格
-    const priceMatch = productText.match(/价格[是]?(\d+\.?\d*)|(\d+\.?\d*)\s*元|¥(\d+\.?\d*)|￥(\d+\.?\d*)/);
-    if (priceMatch) {
-        price = parseFloat(priceMatch[1] || priceMatch[2] || priceMatch[3] || priceMatch[4] || 0);
-    }
-    
-    // 去除价格相关文字，提取商品名称
-    name = productText
-        .replace(/价格[是]?\d+\.?\d*\s*元?/, '')
-        .replace(/¥\d+\.?\d*/, '')
-        .replace(/￥\d+\.?\d*/, '')
-        .replace(/上?架|出?售|卖|卖出/, '')
-        .trim();
-    
-    if (!name || price <= 0) {
-        alert('请输入完整的商品名称和价格');
-        document.getElementById('loadingArea').style.display = 'none';
-        return;
-    }
     
     // 调用API
     fetch('/api/uploader/list', {
@@ -210,7 +526,13 @@ function submitListing() {
         },
         body: JSON.stringify({
             name: name,
-            price: price
+            price: price,
+            original_price: originalPrice,
+            sku_code: skuCode,
+            brand: brand,
+            stock: stock,
+            main_images: mainImages,
+            detail_images: detailImages
         })
     })
     .then(response => response.json())
@@ -230,7 +552,7 @@ function submitListing() {
             resultIcon.className = 'bi bi-check-circle-fill me-2';
             resultIcon.style.color = '#10b981';
             resultTitle.textContent = '上架成功！';
-            resultMessage.textContent = '商品ID: ' + data.product_id + ' | 类目: ' + (data.category || []).map(c => c.cat_id).join(' → ');
+            resultMessage.textContent = '商品ID: ' + data.product_id + ' | SKU: ' + skuCode;
         } else {
             resultAlert.className = 'alert alert-danger d-flex align-items-center';
             resultIcon.className = 'bi bi-x-circle-fill me-2';
@@ -277,12 +599,5 @@ function refreshProducts() {
 
 // 页面加载时获取商品列表
 document.addEventListener('DOMContentLoaded', refreshProducts);
-
-// 回车提交
-document.getElementById('productText').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        submitListing();
-    }
-});
 </script>
 {% endblock %}

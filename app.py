@@ -1055,18 +1055,47 @@ def api_uploader_list():
         
         name = data.get('name', '').strip()
         price = data.get('price')
+        sku_code = data.get('sku_code', '')
         
         if not name:
             return jsonify({"success": False, "message": "请提供商品名称"}), 400
         if not price:
             return jsonify({"success": False, "message": "请提供商品价格"}), 400
         
+        # 获取图片
+        main_images = data.get('main_images', [])
+        detail_images = data.get('detail_images', [])
+        
+        import os
+        log_file = '/tmp/flask_debug.log'
+        with open(log_file, 'a') as f:
+            f.write(f"[APP.PY] 收到请求: name={name}, main_images={main_images}, detail_images={detail_images}\n")
+        
+        # 如果没有提供图片，使用模板图
+        if len(main_images) == 0:
+            with open(log_file, 'a') as f:
+                f.write("[APP.PY] main_images为空，使用模板\n")
+            try:
+                uploader = SmartWechatUploader()
+                config = uploader.get_template_config()
+                main_images = config.get('head_imgs', [])[:5]
+                detail_images = config.get('desc_info_imgs', [])[:10]
+            except Exception as e:
+                with open(log_file, 'a') as f:
+                    f.write(f"[APP.PY] 获取模板失败: {e}\n")
+        else:
+            with open(log_file, 'a') as f:
+                f.write("[APP.PY] 使用用户图片\n")
+        
         # 调用智能上架助手
         result = smart_list_product(
             name=name,
             price=float(price),
             original_price=data.get('original_price'),
-            stock=data.get('stock', 100)
+            stock=data.get('stock', 100),
+            main_images=main_images,
+            detail_images=detail_images,
+            sku_code=sku_code
         )
         
         return jsonify(result)
@@ -1077,10 +1106,10 @@ def api_uploader_list():
 @app.route('/api/uploader/products', methods=['GET'])
 def api_uploader_products():
     """获取微信小店商品列表"""
-    from wechat_uploader import WechatShopUploader
+    from wechat_uploader import SmartWechatUploader
     
     try:
-        uploader = WechatShopUploader()
+        uploader = SmartWechatUploader()
         product_ids = uploader.get_product_list(limit=50)
         
         products = []
@@ -1125,6 +1154,10 @@ def api_uploader_sync(product_id):
 
 # ==================== 微信小店商品管理 ====================
 from routes_shop import shop_api
+from routes_uploader import bp as uploader_bp
+from routes_strategy import strategy_bp
+app.register_blueprint(uploader_bp)
+app.register_blueprint(strategy_bp)
 
 @app.route('/wxshop/products')
 def wechat_shop_products():
@@ -1235,13 +1268,35 @@ def product_analysis():
         # 建议
         suggestions = []
         if on_sale < total * 0.5:
-            suggestions.append(f"⚠️ 上架率偏低 ({on_sale}/{total})，建议检查未上架商品")
+            suggestions.append({
+                "level": "high",
+                "title": "上架率偏低",
+                "content": f"当前仅 {on_sale}/{total} 个商品上架，建议检查未上架商品并尽快上架。"
+            })
         if total_sold == 0:
-            suggestions.append("📢 所有商品销量为0，建议优化商品信息或调整价格")
+            suggestions.append({
+                "level": "high",
+                "title": "销量为零",
+                "content": "所有商品暂无销量，建议优化商品主图、标题或调整价格策略。"
+            })
         if len(products) < 5:
-            suggestions.append("📝 商品数量较少，建议增加SKU")
-        for p in need_attention:
-            suggestions.append(f"🔍 商品 '{p.get('title', '未命名')[:20]}' 销量为0，建议优化或下架")
+            suggestions.append({
+                "level": "medium",
+                "title": "SKU不足",
+                "content": "商品数量较少，建议根据市场需求增加更多SKU。"
+            })
+        for p in need_attention[:3]:
+            suggestions.append({
+                "level": "medium",
+                "title": f"商品待优化: {p.get('title', '未命名')[:15]}",
+                "content": "该商品销量为零且未上架，建议优化详情页或下架处理。"
+            })
+        if on_sale >= total * 0.8 and total_sold > 0:
+            suggestions.append({
+                "level": "low",
+                "title": "运营状态良好",
+                "content": "继续保持当前的运营节奏，关注数据分析优化细节。"
+            })
         
         return render_template('analysis.html',
                              total=total,

@@ -1,0 +1,65 @@
+# 微信小店API配置
+wechat:
+  # 接口调用凭证
+  access_token: "YOUR_ACCESS_TOKEN_HERE"
+  
+  # 图片上传相关
+  # 微信图片上传接口: POST https://api.weixin.qq.com/channels/ec/basics/img/upload
+  img_upload_url: "https://api.weixin.qq.com/channels/ec/basics/img/upload"
+  
+  # 商品添加接口
+  product_add_url: "https://api.weixin.qq.com/channels/ec/product/add"
+
+# 图片配置
+images:
+  # 图片文件夹路径
+  base_path: "/home/wangziyi/桌面/上架商品图"
+  
+  # 主图配置
+  main_img:
+    # 主图文件名（不含扩展名）
+    filename: "主图"
+    # 支持的扩展名（按优先级）
+    extensions: ["", ".jpg", ".jpeg", ".png", ".webp"]
+    # 最少3张，最多9张（食品饮料和生鲜最少4张）
+    min_count: 3
+    max_count: 9
+  
+  # 详情图配置
+  detail_img:
+    # 详情图文件名前缀
+    prefix: "详情图"
+    # 支持的扩展名
+    extensions: ["", ".jpg", ".jpeg", ".png", ".webp"]
+    # 最少1张，最多20张（食品饮料和生鲜最少3张）
+    min_count: 1
+    max_count: 20
+
+# 商品默认配置
+defaults:
+  # 发货方式: 0-快递发货; 1-无需快递，手机号发货; 3-无需快递，可选发货账号类型
+  deliver_method: 0
+  
+  # 发货账号类型（deliver_method=3时有效）: 1-微信openid; 2-QQ号; 3-手机号; 4-邮箱
+  deliver_acct_type: [3]
+  
+  # 品牌ID，无品牌为"2100000000"
+  brand_id: "2100000000"
+  
+  # 是否支持七天无理由退货: 0-不支持; 1-支持; 2-支持(定制商品除外); 3-支持(使用后不支持)
+  seven_day_return: 1
+  
+  # 是否支持运费险: 0-不支持; 1-支持
+  freight_insurance: 0
+  
+  # 是否支持坏损包退: 0-不支持; 1-支持
+  damage_guarantee: 0
+  
+  # 是否支持假一赔三: 0-不支持; 1-支持
+  fake_one_pay_three: 0
+  
+  # 是否支持换货: 0-关闭; 1-打开
+  exchange_support: 0
+  
+  # 添加完成后是否立即上架: 1-是; 0-否
+  listing: 0

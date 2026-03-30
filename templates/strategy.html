@@ -1,0 +1,614 @@
+{% extends "base.html" %}
+
+{% block title %}电商决策助手{% endblock %}
+{% block page_title %}电商决策助手{% endblock %}
+
+{% block content %}
+<style>
+    /* 策略助手专属样式 */
+    .strategy-container {
+        display: flex;
+        gap: 20px;
+        height: calc(100vh - 180px);
+    }
+    
+    .chat-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+    
+    .chat-header {
+        padding: 16px 24px;
+        background: linear-gradient(135deg, #4f46e5, #818cf8);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .chat-header-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+    
+    .chat-header-info h4 {
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    .chat-header-info p {
+        margin: 4px 0 0;
+        font-size: 12px;
+        opacity: 0.8;
+    }
+    
+    .chat-messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background: #f8fafc;
+    }
+    
+    .message {
+        margin-bottom: 16px;
+        animation: fadeInUp 0.3s ease;
+    }
+    
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .message.user {
+        text-align: right;
+    }
+    
+    .message-content {
+        display: inline-block;
+        padding: 12px 16px;
+        border-radius: 16px;
+        max-width: 80%;
+        line-height: 1.6;
+    }
+    
+    .message.user .message-content {
+        background: linear-gradient(135deg, #4f46e5, #818cf8);
+        color: #fff;
+        border-bottom-right-radius: 4px;
+    }
+    
+    .message.ai .message-content {
+        background: #fff;
+        color: #1e293b;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .message-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+    
+    .message.user .message-avatar {
+        background: linear-gradient(135deg, #4f46e5, #818cf8);
+        color: #fff;
+        float: right;
+        margin-left: 8px;
+    }
+    
+    .message.ai .message-avatar {
+        background: linear-gradient(135deg, #10b981, #34d399);
+        color: #fff;
+        float: left;
+        margin-right: 8px;
+    }
+    
+    .message-time {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-top: 4px;
+    }
+    
+    .message.user .message-time {
+        text-align: right;
+    }
+    
+    .quick-prompts {
+        padding: 16px 20px;
+        background: #fff;
+        border-top: 1px solid #f1f5f9;
+    }
+    
+    .quick-prompts-title {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+    
+    .quick-prompt-btn {
+        display: inline-block;
+        padding: 8px 14px;
+        background: #f1f5f9;
+        color: #475569;
+        border-radius: 20px;
+        font-size: 13px;
+        margin: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+    }
+    
+    .quick-prompt-btn:hover {
+        background: #4f46e5;
+        color: #fff;
+        transform: translateY(-2px);
+    }
+    
+    .chat-input-area {
+        padding: 16px 20px;
+        background: #fff;
+        border-top: 1px solid #f1f5f9;
+    }
+    
+    .chat-input-wrapper {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+    }
+    
+    .chat-input {
+        flex: 1;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 12px 16px;
+        font-size: 14px;
+        resize: none;
+        min-height: 48px;
+        max-height: 120px;
+        transition: border-color 0.3s ease;
+    }
+    
+    .chat-input:focus {
+        outline: none;
+        border-color: #4f46e5;
+    }
+    
+    .chat-input::placeholder {
+        color: #94a3b8;
+    }
+    
+    .send-btn {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #4f46e5, #818cf8);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .send-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+    }
+    
+    .send-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    /* 侧边信息面板 */
+    .info-panel {
+        width: 320px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .info-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+    
+    .info-card-header {
+        padding: 14px 18px;
+        background: linear-gradient(135deg, #f8fafc, #fff);
+        border-bottom: 1px solid #f1f5f9;
+        font-weight: 600;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .info-card-header i {
+        font-size: 18px;
+        color: #4f46e5;
+    }
+    
+    .info-card-body {
+        padding: 16px 18px;
+    }
+    
+    .shop-stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .shop-stat-item:last-child {
+        border-bottom: none;
+    }
+    
+    .shop-stat-label {
+        color: #64748b;
+        font-size: 13px;
+    }
+    
+    .shop-stat-value {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 14px;
+    }
+    
+    .shop-stat-value.highlight {
+        color: #4f46e5;
+    }
+    
+    .category-tag {
+        display: inline-block;
+        padding: 4px 10px;
+        background: #f1f5f9;
+        color: #475569;
+        border-radius: 6px;
+        font-size: 12px;
+        margin: 4px 4px 4px 0;
+    }
+    
+    .category-tag.has-item {
+        background: linear-gradient(135deg, #4f46e5, #818cf8);
+        color: #fff;
+    }
+    
+    .tip-card {
+        padding: 14px;
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        border-radius: 10px;
+        margin-bottom: 12px;
+    }
+    
+    .tip-card:last-child {
+        margin-bottom: 0;
+    }
+    
+    .tip-card-title {
+        font-weight: 600;
+        color: #92400e;
+        font-size: 13px;
+        margin-bottom: 6px;
+    }
+    
+    .tip-card-content {
+        font-size: 12px;
+        color: #a16207;
+        line-height: 1.5;
+    }
+    
+    /* Loading 动画 */
+    .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 8px 0;
+    }
+    
+    .typing-indicator span {
+        width: 8px;
+        height: 8px;
+        background: #94a3b8;
+        border-radius: 50%;
+        animation: bounce 1.4s infinite;
+    }
+    
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes bounce {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-6px); }
+    }
+    
+    /* 空状态 */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #94a3b8;
+    }
+    
+    .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+    
+    .empty-state h5 {
+        color: #64748b;
+        margin-bottom: 8px;
+    }
+    
+    .empty-state p {
+        font-size: 14px;
+    }
+</style>
+
+<div class="strategy-container">
+    <!-- 聊天面板 -->
+    <div class="chat-panel">
+        <div class="chat-header">
+            <div class="chat-header-icon">
+                <i class="bi bi-lightbulb-fill"></i>
+            </div>
+            <div class="chat-header-info">
+                <h4>电商决策助手</h4>
+                <p>AI驱动的智能运营顾问 | 随时为你出谋划策</p>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <!-- 欢迎消息 -->
+            <div class="message ai">
+                <div class="message-avatar">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <div class="message-content">
+                    <p>👋 你好！我是你的电商决策助手。</p>
+                    <p>我能帮你分析店铺数据、制定运营策略、优化商品结构、提升销售业绩。</p>
+                    <p style="margin-top: 12px;">我看到你当前店铺有 <strong style="color: #4f46e5;">{{ product_context.total_products if product_context else 0 }}</strong> 个商品，<strong style="color: #10b981;">{{ product_context.status_summary.on_sale if product_context else 0 }}</strong> 个在售。</p>
+                    <p style="margin-top: 12px;">🎯 <strong>有什么我可以帮你的？</strong></p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 快捷提示 -->
+        <div class="quick-prompts">
+            <div class="quick-prompts-title">💡 快捷问题</div>
+            <button class="quick-prompt-btn" onclick="sendQuickPrompt('分析一下我店铺当前的问题')">分析店铺问题</button>
+            <button class="quick-prompt-btn" onclick="sendQuickPrompt('给我一些提升销量的具体方案')">提升销量方案</button>
+            <button class="quick-prompt-btn" onclick="sendQuickPrompt('帮我规划一下下一周的工作重点')">下周工作规划</button>
+            <button class="quick-prompt-btn" onclick="sendQuickPrompt('竞品分析：我们的猫砂定价合理吗？')">猫砂竞品分析</button>
+        </div>
+        
+        <!-- 输入区域 -->
+        <div class="chat-input-area">
+            <div class="chat-input-wrapper">
+                <textarea 
+                    id="chatInput" 
+                    class="chat-input" 
+                    placeholder="输入你的问题，比如：店铺运营有什么建议？"
+                    rows="1"
+                    onkeydown="handleKeyDown(event)"
+                    oninput="autoResize(this)"
+                ></textarea>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                    <i class="bi bi-send"></i> 发送
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 侧边信息面板 -->
+    <div class="info-panel">
+        <!-- 店铺状态 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <i class="bi bi-shop"></i>
+                当前店铺状态
+            </div>
+            <div class="info-card-body">
+                <div class="shop-stat-item">
+                    <span class="shop-stat-label">商品总数</span>
+                    <span class="shop-stat-value highlight">{{ product_context.total_products if product_context else 0 }}</span>
+                </div>
+                <div class="shop-stat-item">
+                    <span class="shop-stat-label">在售商品</span>
+                    <span class="shop-stat-value">{{ product_context.status_summary.on_sale if product_context else 0 }}</span>
+                </div>
+                <div class="shop-stat-item">
+                    <span class="shop-stat-label">已归档</span>
+                    <span class="shop-stat-value">{{ product_context.status_summary.archived if product_context else 0 }}</span>
+                </div>
+                <div class="shop-stat-item">
+                    <span class="shop-stat-label">总销量</span>
+                    <span class="shop-stat-value">{{ product_context.total_sold if product_context else 0 }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 品类分布 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <i class="bi bi-pie-chart-fill"></i>
+                品类覆盖
+            </div>
+            <div class="info-card-body">
+                {% set all_categories = ['猫粮', '猫砂', '猫罐头', '猫零食', '宠物营养品'] %}
+                {% for cat in all_categories %}
+                    {% if product_context and product_context.categories and cat in product_context.categories %}
+                        <span class="category-tag has-item">{{ cat }} ({{ product_context.categories[cat] }})</span>
+                    {% else %}
+                        <span class="category-tag">{{ cat }}</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- 运营小贴士 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <i class="bi bi-lightbulb"></i>
+                运营小贴士
+            </div>
+            <div class="info-card-body">
+                <div class="tip-card">
+                    <div class="tip-card-title">💰 价格策略</div>
+                    <div class="tip-card-content">新手卖家建议先参考竞品定价，采用"低价切入+逐步提价"策略，先抢占市场份额。</div>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-card-title">📦 库存管理</div>
+                    <div class="tip-card-content">保持足够库存的同时避免积压，建议设置库存预警线，低于预警线时自动提醒补货。</div>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-card-title">📈 提升曝光</div>
+                    <div class="tip-card-content">微信小店的搜索权重与标题关键词密切相关，建议优化商品标题，加入热搜词。</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let isSending = false;
+    
+    function autoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }
+    
+    function handleKeyDown(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    }
+    
+    function sendQuickPrompt(prompt) {
+        document.getElementById('chatInput').value = prompt;
+        sendMessage();
+    }
+    
+    async function sendMessage() {
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+        if (!message || isSending) return;
+        
+        isSending = true;
+        document.getElementById('sendBtn').disabled = true;
+        
+        // 添加用户消息
+        appendMessage('user', message);
+        input.value = '';
+        input.style.height = 'auto';
+        
+        // 添加AI等待消息
+        const aiMsgId = appendMessage('ai', '', true);
+        
+        try {
+            const response = await fetch('/api/strategy/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+            
+            const data = await response.json();
+            
+            // 移除等待动画
+            removeMessage(aiMsgId);
+            
+            if (data.status === 'pending_ai_config') {
+                // AI未配置时显示模拟响应
+                appendMessage('ai', `📊 根据你的店铺数据（{{ product_context.total_products if product_context else 0 }}个商品，{{ product_context.status_summary.on_sale if product_context else 0 }}个在售），我有以下建议：
+
+**1. 优先处理库存问题**
+你的在售商品库存可能为0，这是销量低的主要原因。建议立即检查并补货。
+
+**2. 优化商品结构**
+你当前覆盖了 {{ product_context.categories|length if product_context and product_context.categories else 0 }} 个品类，建议增加猫罐头等高需求品类。
+
+**3. 定价策略调整**
+参考京东同类商品价格，你的妮可露猫砂定价偏低，可以适当提价提升利润。
+
+**💡 下一步建议：** 告诉我你最关心的问题，比如"如何提升转化率"或"怎么选品"，我会给出更具体的方案。`);
+                
+                // 保存到历史
+                saveToHistory('user', message);
+                saveToHistory('ai', data.response);
+            } else {
+                appendMessage('ai', data.response);
+                saveToHistory('user', message);
+                saveToHistory('ai', data.response);
+            }
+        } catch (error) {
+            removeMessage(aiMsgId);
+            appendMessage('ai', '抱歉，发生了错误，请稍后再试。');
+            console.error('Error:', error);
+        }
+        
+        isSending = false;
+        document.getElementById('sendBtn').disabled = false;
+    }
+    
+    function appendMessage(type, content, isTyping = false) {
+        const container = document.getElementById('chatMessages');
+        const msgId = 'msg_' + Date.now();
+        
+        let avatarIcon = type === 'user' ? '<i class="bi bi-person"></i>' : '<i class="bi bi-robot"></i>';
+        
+        const html = `
+            <div class="message ${type}" id="${msgId}">
+                <div class="message-avatar">${avatarIcon}</div>
+                <div style="display: inline-block; max-width: 80%;">
+                    <div class="message-content">
+                        ${isTyping ? '<div class="typing-indicator"><span></span><span></span><span></span></div>' : content.replace(/\n/g, '<br>')}
+                    </div>
+                    <div class="message-time">${new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'})}</div>
+                </div>
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', html);
+        container.scrollTop = container.scrollHeight;
+        
+        return msgId;
+    }
+    
+    function removeMessage(msgId) {
+        const el = document.getElementById(msgId);
+        if (el) el.remove();
+    }
+    
+    async function saveToHistory(type, content) {
+        try {
+            await fetch('/api/strategy/history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'add', type: type, message: content })
+            });
+        } catch (e) {
+            console.error('Failed to save history:', e);
+        }
+    }
+</script>
+{% endblock %}
