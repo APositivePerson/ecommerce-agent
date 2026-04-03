@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}物流跟踪 - 供应链管理{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title"><i class="bi bi-truck me-2"></i>物流跟踪</h2>
+</div>
+
+<!-- 物流概览 -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card bg-primary">
+            <div class="stat-label">总订单数</div>
+            <div class="stat-value">{{ logistics_summary.total_orders }}</div>
+            <div class="stat-icon"><i class="bi bi-box-seam"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card bg-info">
+            <div class="stat-label">总物流费用</div>
+            <div class="stat-value">¥{{ "%.0f"|format(logistics_summary.total_cost) }}</div>
+            <div class="stat-icon"><i class="bi bi-currency-dollar"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card bg-success">
+            <div class="stat-label">平均每单</div>
+            <div class="stat-value">¥{{ "%.0f"|format(logistics_summary.avg_cost_per_order) }}</div>
+            <div class="stat-icon"><i class="bi bi-receipt"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card bg-warning">
+            <div class="stat-label">即将到达</div>
+            <div class="stat-value">{{ logistics_summary.arriving_soon|length }}</div>
+            <div class="stat-icon"><i class="bi bi-clock"></i></div>
+        </div>
+    </div>
+</div>
+
+<!-- 按状态分布 -->
+<div class="row g-3 mb-4">
+    {% for status, info in logistics_summary.by_status.items() %}
+    <div class="col-md-2">
+        <div class="card text-center py-3">
+            <div class="fs-4 fw-bold mb-1">{{ info.count }}</div>
+            <div class="small text-muted">{{ status }}</div>
+            <div class="small text-info">¥{{ "%.0f"|format(info.cost) }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 即将到达的订单 -->
+{% if logistics_summary.arriving_soon %}
+<div class="card mb-4 border-success">
+    <div class="card-header bg-success bg-opacity-10">
+        <i class="bi bi-clock me-2 text-success"></i>即将到达 (3天内)
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>订单号</th>
+                        <th>商品</th>
+                        <th>数量</th>
+                        <th>承运商</th>
+                        <th>预计到达</th>
+                        <th>运费(估算)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in logistics_summary.arriving_soon %}
+                    <tr class="table-success">
+                        <td><code>{{ l.order_id }}</code></td>
+                        <td>{{ l.name }}</td>
+                        <td>{{ l.quantity }}</td>
+                        <td>{{ l.carrier }}</td>
+                        <td>
+                            {% if l.days_until == 0 %}
+                            <span class="badge bg-success">今天到达</span>
+                            {% elif l.days_until == 1 %}
+                            <span class="badge bg-warning text-dark">明天到达</span>
+                            {% else %}
+                            <span class="badge bg-info">{{ l.days_until }}天后</span>
+                            {% endif %}
+                        </td>
+                        <td>¥{{ "%.0f"|format(l.cost - l.quantity * 25) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 全部物流订单 -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-ul me-2"></i>全部物流订单</span>
+        <span class="badge bg-secondary">{{ all_logistics|length }} 条记录</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>订单号</th>
+                        <th>商品</th>
+                        <th>供应商</th>
+                        <th>数量</th>
+                        <th>下单日期</th>
+                        <th>预计到达</th>
+                        <th>承运商</th>
+                        <th>总费用</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in all_logistics %}
+                    <tr>
+                        <td><code>{{ l.order_id }}</code></td>
+                        <td>{{ l.name }}</td>
+                        <td><small class="text-muted">{{ l.supplier_id }}</small></td>
+                        <td>{{ l.quantity }}</td>
+                        <td>{{ l.order_date }}</td>
+                        <td>{{ l.eta }}</td>
+                        <td><small>{{ l.carrier }}</small></td>
+                        <td class="fw-bold text-primary">¥{{ "%.0f"|format(l.cost) }}</td>
+                        <td>
+                            {% if l.status == '已到达' %}
+                            <span class="badge bg-success">{{ l.status }}</span>
+                            {% elif l.status == '运输中' or l.status == '配送中' %}
+                            <span class="badge bg-info">{{ l.status }}</span>
+                            {% elif l.status == '已发货' %}
+                            <span class="badge bg-primary">{{ l.status }}</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">{{ l.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

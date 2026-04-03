@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}AI决策建议 - 供应链决策平台{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title"><i class="bi bi-robot me-2"></i>AI决策建议</h2>
+    <div class="d-flex align-items-center gap-3">
+        <span class="badge bg-primary fs-6">共 {{ total_recommendations }} 项建议</span>
+        <button class="btn btn-primary btn-sm" onclick="exportDecisions()">
+            <i class="bi bi-download me-1"></i>导出决策报告
+        </button>
+    </div>
+</div>
+
+<!-- AI概览卡片 -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center py-3 border-danger">
+            <div class="stat-value text-danger fs-2">{{ reorder|selectattr('urgency', 'equalto', 'high')|list|length + predictions|selectattr('risk_level', 'equalto', 'critical')|list|length }}</div>
+            <div class="stat-label">紧急行动</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-3 border-warning">
+            <div class="stat-value text-warning fs-2">{{ reorder|length }}</div>
+            <div class="stat-label">待补货建议</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-3 border-secondary">
+            <div class="stat-value text-muted fs-2">{{ cost_optimizations|length }}</div>
+            <div class="stat-label">成本优化</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-3 border-info">
+            <div class="stat-value text-info fs-2">{{ supplier_recommendations|length }}</div>
+            <div class="stat-label">供应商推荐</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- 补货建议 -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-cart-plus me-2"></i>补货建议</span>
+                <span class="badge bg-warning text-dark">{{ reorder|length }} 项</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>优先级</th>
+                                <th>商品</th>
+                                <th>当前库存</th>
+                                <th>建议补货量</th>
+                                <th>供应商</th>
+                                <th>预计成本</th>
+                                <th>紧急度</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in reorder %}
+                            <tr class="{% if r.urgency == 'high' %}table-danger{% elif r.urgency == 'medium' %}table-warning{% endif %}">
+                                <td>
+                                    {% if r.priority == 1 %}
+                                    <span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i> 紧急</span>
+                                    {% elif r.priority == 2 %}
+                                    <span class="badge bg-warning text-dark">重要</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">一般</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="fw-500">{{ r.name }}</div>
+                                    <small class="text-muted">{{ r.sku }}</small>
+                                </td>
+                                <td>
+                                    {% if r.current_stock == 0 %}
+                                    <span class="text-danger fw-bold">0 (缺货)</span>
+                                    {% else %}
+                                    {{ r.current_stock }}
+                                    {% endif %}
+                                </td>
+                                <td class="fw-bold text-primary">{{ r.suggested_qty }}</td>
+                                <td><small>{{ r.supplier_name }}</small></td>
+                                <td>¥{{ "%.2f"|format(r.estimated_cost) }}</td>
+                                <td>
+                                    {% if r.urgency == 'high' %}
+                                    <span class="badge bg-danger">立即</span>
+                                    {% elif r.urgency == 'medium' %}
+                                    <span class="badge bg-warning text-dark">本周</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">正常</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    <i class="bi bi-check-circle" style="font-size:2rem"></i>
+                                    <p class="mb-0 mt-2">库存充足，暂无补货建议</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 缺货预测 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-hourglass-split me-2"></i>缺货预测（未来14天）
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>商品</th>
+                                <th>当前库存</th>
+                                <th>日需求</th>
+                                <th>预计缺货日期</th>
+                                <th>剩余天数</th>
+                                <th>在途数量</th>
+                                <th>风险等级</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in predictions %}
+                            <tr class="{% if p.risk_level == 'critical' %}table-danger{% elif p.risk_level == 'high' %}table-warning{% endif %}">
+                                <td>
+                                    <div class="fw-500">{{ p.name }}</div>
+                                    <small class="text-muted">{{ p.sku }}</small>
+                                </td>
+                                <td>{{ p.current_stock }}</td>
+                                <td>{{ p.demand_daily }}</td>
+                                <td class="text-danger fw-bold">{{ p.stockout_date }}</td>
+                                <td>
+                                    {% if p.days_until_stockout < 3 %}
+                                    <span class="badge bg-danger">{{ p.days_until_stockout }}天</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark">{{ p.days_until_stockout }}天</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ p.in_transit_qty }}</td>
+                                <td>
+                                    {% if p.risk_level == 'critical' %}
+                                    <span class="badge bg-danger">极高</span>
+                                    {% elif p.risk_level == 'high' %}
+                                    <span class="badge bg-warning text-dark">高</span>
+                                    {% else %}
+                                    <span class="badge bg-info">中</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">暂无缺货风险</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 成本优化 -->
+        {% if cost_optimizations %}
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-piggy-bank me-2"></i>成本优化建议
+            </div>
+            <div class="card-body p-0">
+                {% for c in cost_optimizations %}
+                <div class="p-3 border-bottom {% if c.severity == 'high' %}bg-danger bg-opacity-5{% elif c.severity == 'medium' %}bg-warning bg-opacity-5{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge {% if c.severity == 'high' %}bg-danger{% elif c.severity == 'medium' %}bg-warning text-dark{% else %}bg-info{% endif %} me-2">
+                                {{ c.type }}
+                            </span>
+                            <strong>{{ c.get('name', c.description) }}</strong>
+                            <p class="mb-0 mt-1 text-muted small">{{ c.description }}</p>
+                        </div>
+                        {% if c.capital_occupied %}
+                        <div class="text-end">
+                            <div class="text-danger fw-bold">¥{{ "%.2f"|format(c.capital_occupied) }}</div>
+                            <small class="text-muted">占用资金</small>
+                        </div>
+                        {% elif c.get('potential_savings') %}
+                        <div class="text-end">
+                            <div class="text-success fw-bold">¥{{ "%.2f"|format(c.potential_savings) }}</div>
+                            <small class="text-muted">节省潜力</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="mt-2 small">
+                        <i class="bi bi-lightbulb text-primary me-1"></i>{{ c.suggestion }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 右侧：供应商推荐 -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-star me-2"></i>供应商推荐
+            </div>
+            <div class="card-body p-0">
+                {% for rec in supplier_recommendations[:6] %}
+                <div class="p-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong>{{ rec.name }}</strong>
+                            <span class="badge bg-light text-dark ms-1">{{ rec.category }}</span>
+                        </div>
+                        <span class="text-warning">{{ "★" * (rec.score | int // 20) }}</span>
+                    </div>
+                    <div class="small text-muted mb-2">
+                        交期{{ rec.lead_time }}天 | 评分{{ rec.score }} | {{ rec.sku_count }}SKU
+                    </div>
+                    {% if rec.pros %}
+                    <div class="mb-1">
+                        {% for p in rec.pros[:2] %}
+                        <span class="badge bg-success me-1 mb-1" style="font-size:10px"><i class="bi bi-check"></i>{{ p }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if rec.cons %}
+                    <div>
+                        {% for c in rec.cons[:2] %}
+                        <span class="badge bg-danger me-1 mb-1" style="font-size:10px"><i class="bi bi-x"></i>{{ c }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 决策摘要 -->
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-cpu me-2"></i>AI决策摘要</h5>
+                <hr style="border-color:rgba(255,255,255,0.3)">
+                <div class="small">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>待补货商品</span>
+                        <strong>{{ reorder|length }}个</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>缺货预警</span>
+                        <strong class="{% if predictions|length > 0 %}text-warning{% endif %}">{{ predictions|length }}个</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>成本优化机会</span>
+                        <strong>{{ cost_optimizations|length }}个</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>涉及金额</span>
+                        <strong>¥{{ "%.1f"|format(reorder|sum(attribute='estimated_cost') / 10000) }}万</strong>
+                    </div>
+                </div>
+                <div class="mt-3 small opacity-75">
+                    <i class="bi bi-info-circle me-1"></i>基于EOQ模型、安全库存分析和历史销售数据生成
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+function exportDecisions() {
+    window.location.href = '/supply_chain/export/decisions';
+}
+</script>
+{% endblock %}

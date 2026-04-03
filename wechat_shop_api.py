@@ -2,6 +2,12 @@
 微信小店商品管理模块
 提供商品列表获取、商品详情查询等功能
 """
+import os
+# 强制不走系统代理（处理 Clash TUN / 系统级代理劫持）
+for _k in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY',
+           'all_proxy', 'ALL_PROXY', 'no_proxy', 'NO_PROXY']:
+    os.environ.pop(_k, None)
+
 import requests
 import json
 from datetime import datetime, timedelta
@@ -15,6 +21,10 @@ class WechatShopAPI:
         self.secret = secret or "d9560ed4c2782016fcccef4c3f009d9a"
         self.access_token = None
         self.token_expire_time = None
+        # 微信API不走代理，使用独立session
+        self.session = requests.Session()
+        self.session.trust_env = False  # 忽略环境变量中的代理设置
+        self.session.proxies = {}       # 确保不通过任何代理
     
     def _get_access_token(self) -> str:
         """获取access_token，使用 getStableAccessToken"""
@@ -31,7 +41,7 @@ class WechatShopAPI:
         }
         
         try:
-            response = requests.post(url, json=params, timeout=10)
+            response = self.session.post(url, json=params, timeout=10)
             data = response.json()
             
             if "access_token" in data:
@@ -72,7 +82,7 @@ class WechatShopAPI:
             payload["next_key"] = next_key
         
         try:
-            response = requests.post(url, json=payload, timeout=15)
+            response = self.session.post(url, json=payload, timeout=15)
             return response.json()
         except Exception as e:
             return {"errcode": -1, "errmsg": f"请求失败: {str(e)}"}
@@ -95,7 +105,7 @@ class WechatShopAPI:
         }
         
         try:
-            response = requests.post(url, json=payload, timeout=15)
+            response = self.session.post(url, json=payload, timeout=15)
             return response.json()
         except Exception as e:
             return {"errcode": -1, "errmsg": f"请求失败: {str(e)}"}
@@ -181,7 +191,7 @@ class WechatShopAPI:
         }
 
         try:
-            response = requests.post(url, json=data, timeout=30)
+            response = self.session.post(url, json=data, timeout=30)
             result = response.json()
 
             if result.get("errcode") == 0:
@@ -201,7 +211,7 @@ class WechatShopAPI:
         }
 
         try:
-            response = requests.post(url, json=data, timeout=30)
+            response = self.session.post(url, json=data, timeout=30)
             result = response.json()
 
             if result.get("errcode") == 0:

@@ -1156,8 +1156,10 @@ def api_uploader_sync(product_id):
 from routes_shop import shop_api
 from routes_uploader import bp as uploader_bp
 from routes_strategy import strategy_bp
+from routes_supply_chain import supply_chain_bp
 app.register_blueprint(uploader_bp)
 app.register_blueprint(strategy_bp)
+app.register_blueprint(supply_chain_bp)
 
 @app.route('/wxshop/products')
 def wechat_shop_products():

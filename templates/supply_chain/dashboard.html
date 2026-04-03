@@ -1,0 +1,545 @@
+{% extends "base.html" %}
+
+{% block title %}供应链总览 - 电商智能体管理系统{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+/* 缩小统计卡片图标和尺寸 */
+.stat-card .stat-icon {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 18px !important;
+    border-radius: 8px !important;
+}
+.stat-card .stat-value {
+    font-size: 22px !important;
+    margin: 6px 0 2px !important;
+}
+.stat-card .stat-label {
+    font-size: 12px !important;
+}
+.stat-card {
+    padding: 16px !important;
+}
+.stat-sub {
+    font-size: 11px !important;
+    opacity: 0.85 !important;
+}
+/* 缩小图表 canvas */
+.card-body canvas {
+    max-width: 100% !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title"><i class="bi bi-box-seam me-2"></i>供应链总览</h2>
+    <div>
+        <button class="btn btn-outline-primary btn-sm" onclick="refreshData()">
+            <i class="bi bi-arrow-clockwise"></i> 刷新数据
+        </button>
+        <span class="text-muted ms-3" style="font-size:12px">更新于 {{ now.strftime('%H:%M:%S') }}</span>
+    </div>
+</div>
+
+<!-- KPI统计卡片 -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card bg-primary">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">库存总价值</div>
+                    <div class="stat-value">¥{{ "%.1f"|format(kpis.total_inventory_value/10000) }}万</div>
+                    <div class="stat-sub">SKU: {{ kpis.total_skus }}个</div>
+                </div>
+                <div class="stat-icon"><i class="bi bi-box"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card bg-warning">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">待补货商品</div>
+                    <div class="stat-value">{{ kpis.warning_items + kpis.danger_items + kpis.critical_items }}</div>
+                    <div class="stat-sub">
+                        <span class="badge bg-danger">{{ kpis.critical_items }} 紧急</span>
+                        <span class="badge bg-warning text-dark">{{ kpis.danger_items }} 危险</span>
+                    </div>
+                </div>
+                <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card bg-info">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">在途订单价值</div>
+                    <div class="stat-value">¥{{ "%.1f"|format(kpis.in_transit_value/10000) }}万</div>
+                    <div class="stat-sub">安全库存: ¥{{ "%.1f"|format(kpis.total_safety_stock_value/10000) }}万</div>
+                </div>
+                <div class="stat-icon"><i class="bi bi-truck"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card bg-success">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">供应链风险</div>
+                    <div class="stat-value">{{ urgent_actions|length }}</div>
+                    <div class="stat-sub">需要立即处理</div>
+                </div>
+                <div class="stat-icon"><i class="bi bi-shield-exclamation"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表区 -->
+<div class="row g-3 mb-3">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">
+                <span><i class="bi bi-pie-chart me-2"></i>库存分布（按类别）</span>
+            </div>
+            <div class="card-body p-2">
+                <div class="d-flex flex-wrap gap-2 justify-content-center">
+                    {% set colors = ['#4f46e5','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'] %}
+                    {% for cat, data in kpis.by_category.items() %}
+                    <div class="text-center" style="min-width:70px">
+                        <div style="width:36px;height:36px;border-radius:50%;background:{{ colors[loop.index0 % colors|length] }};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700">
+                            {{ data.count }}
+                        </div>
+                        <div style="font-size:11px;color:#64748b;margin-top:3px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ cat }}</div>
+                        <div style="font-size:11px;color:#94a3b8">¥{{ (data.value/10000)|round(1) }}万</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <span><i class="bi bi-bar-chart me-2"></i>库存健康度</span>
+            </div>
+            <div class="card-body p-2">
+                <canvas id="healthChart" style="max-height:95px"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 紧急行动 + 预警 + 供应商 -->
+<div class="row g-4">
+    <!-- 紧急行动 -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <span><i class="bi bi-lightning-charge me-2"></i>紧急行动</span>
+                <span class="badge bg-danger">{{ urgent_actions|length }} 项待处理</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for action in urgent_actions[:6] %}
+                    <div class="list-group-item d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            {% if action.urgency == 'high' or action.urgency == 'critical' %}
+                            <span class="badge bg-danger me-2"><i class="bi bi-exclamation-circle"></i></span>
+                            {% elif action.urgency == 'medium' %}
+                            <span class="badge bg-warning text-dark me-2"><i class="bi bi-exclamation-triangle"></i></span>
+                            {% else %}
+                            <span class="badge bg-info me-2"><i class="bi bi-info-circle"></i></span>
+                            {% endif %}
+                            <span>{{ action.description }}</span>
+                        </div>
+                        <span class="badge bg-secondary">{{ ['补货', '预警', '优化'][action.priority] }}</span>
+                    </div>
+                    {% else %}
+                    <div class="list-group-item text-center text-muted py-4">
+                        <i class="bi bi-check-circle" style="font-size:2rem"></i>
+                        <p class="mb-0 mt-2">暂无紧急行动</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 库存预警 -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <span><i class="bi bi-bell me-2"></i>库存预警</span>
+                <a href="{{ url_for('supply_chain.inventory_page') }}" class="btn btn-sm btn-outline-primary">查看全部</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>商品</th>
+                                <th>当前库存</th>
+                                <th>状态</th>
+                                <th>剩余天数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alert in alerts[:5] %}
+                            <tr>
+                                <td>
+                                    <div class="fw-500">{{ alert.name }}</div>
+                                    <small class="text-muted">{{ alert.sku }}</small>
+                                </td>
+                                <td>{{ alert.stock }}</td>
+                                <td>
+                                    {% if alert.status == 'critical' %}
+                                    <span class="badge bg-danger">缺货</span>
+                                    {% elif alert.status == 'danger' %}
+                                    <span class="badge bg-warning text-dark">低于安全库存</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">正常</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if alert.days_until_stockout < 3 %}
+                                    <span class="text-danger fw-bold">{{ "%.0f"|format(alert.days_until_stockout) }}天</span>
+                                    {% elif alert.days_until_stockout < 7 %}
+                                    <span class="text-warning fw-bold">{{ "%.0f"|format(alert.days_until_stockout) }}天</span>
+                                    {% else %}
+                                    <span class="text-muted">{{ "%.0f"|format(alert.days_until_stockout) }}天</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">暂无预警</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 供应商TOP榜 -->
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <span><i class="bi bi-star me-2"></i>供应商排行榜</span>
+                <a href="{{ url_for('supply_chain.suppliers_page') }}" class="btn btn-sm btn-outline-primary">查看全部</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>供应商</th>
+                                <th>主营</th>
+                                <th>评分</th>
+                                <th>交期</th>
+                                <th>供货SKU</th>
+                                <th>依赖度</th>
+                                <th>风险SKU</th>
+                                <th>综合评分</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in top_suppliers %}
+                            <tr>
+                                <td>
+                                    {% if loop.index == 1 %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-trophy-fill"></i> 1</span>
+                                    {% elif loop.index == 2 %}
+                                    <span class="badge bg-secondary"><i class="bi bi-medal"></i> 2</span>
+                                    {% elif loop.index == 3 %}
+                                    <span class="badge" style="background:#cd7f32"><i class="bi bi-medal"></i> 3</span>
+                                    {% else %}
+                                    <span class="text-muted">{{ loop.index }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="fw-500">{{ s.name }}</td>
+                                <td><span class="badge bg-light text-dark">{{ s.category }}</span></td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="text-warning me-1">★★★★★</div>
+                                        <small class="text-muted">{{ s.rating }}</small>
+                                    </div>
+                                </td>
+                                <td>{{ s.lead_time }}天</td>
+                                <td>{{ s.sku_count }}</td>
+                                <td>
+                                    {% if s.risk_level == 'high' %}
+                                    <span class="badge bg-danger">{{ s.dependency }}%</span>
+                                    {% elif s.risk_level == 'medium' %}
+                                    <span class="badge bg-warning text-dark">{{ s.dependency }}%</span>
+                                    {% else %}
+                                    <span class="badge bg-success">{{ s.dependency }}%</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if s.risk_skus > 0 %}
+                                    <span class="badge bg-danger">{{ s.risk_skus }}</span>
+                                    {% else %}
+                                    <span class="text-muted">0</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-2" style="height:6px">
+                                            <div class="progress-bar bg-primary" style="width:{{ s.score }}%"></div>
+                                        </div>
+                                        <strong>{{ s.score }}</strong>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 微信小店商品 -->
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary bg-opacity-10">
+                <span class="text-primary"><i class="bi bi-wechat me-2"></i>微信小店商品</span>
+                <span class="badge bg-secondary ms-2">{{ wechat_products|length }} 个</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size:13px">
+                        <thead>
+                            <tr>
+                                <th>商品名称</th>
+                                <th>售价</th>
+                                <th>销量</th>
+                                <th>库存</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in wechat_products %}
+                            <tr>
+                                <td class="fw-500">{{ p.title }}</td>
+                                <td>{% if p.price > 0 %}¥{{ "%.2f"|format(p.price) }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                <td>{{ p.sold }}</td>
+                                <td>{{ p.stock }}</td>
+                                <td>
+                                    {% if p.status == '在售' %}
+                                    <span class="badge bg-success">{{ p.status }}</span>
+                                    {% elif p.status == '已下架' %}
+                                    <span class="badge bg-secondary">{{ p.status }}</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark">{{ p.status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    {% if wechat_error %}
+                                    <div class="alert alert-warning mb-0" style="font-size:13px">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        <strong>微信商品加载失败：</strong>{{ wechat_error }}<br>
+                                        <small>请前往微信公众平台将服务器IP <code>112.224.166.231</code> 加入白名单，或联系管理员检查access_token配置</small>
+                                    </div>
+                                    {% else %}
+                                    <i class="bi bi-inbox" style="font-size:2rem"></i>
+                                    <p class="mb-0 mt-2">暂无商品</p>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 供应链风险 -->
+{% if risks %}
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning bg-opacity-10">
+                <span class="text-warning"><i class="bi bi-shield-exclamation me-2"></i>供应链风险提示</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for risk in risks %}
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3" style="background: {% if risk.severity=='high' %}#fee2e2{% elif risk.severity=='medium' %}#fef3c7{% else %}#e0f2fe{% endif %}">
+                            <div class="d-flex align-items-center mb-2">
+                                {% if risk.severity == 'high' %}
+                                <span class="badge bg-danger me-2">高风险</span>
+                                {% elif risk.severity == 'medium' %}
+                                <span class="badge bg-warning text-dark me-2">中风险</span>
+                                {% else %}
+                                <span class="badge bg-info me-2">低风险</span>
+                                {% endif %}
+                                <strong>{{ risk.type }}</strong>
+                            </div>
+                            <p class="mb-1 small">{{ risk.description }}</p>
+                            <p class="mb-0 text-muted small"><i class="bi bi-lightbulb me-1"></i>{{ risk.suggestion }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 竞品分析 -->
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info bg-opacity-10">
+                <span class="text-info"><i class="bi bi-bar-chart-line me-2"></i>竞品价格分析</span>
+                <span class="badge bg-secondary ms-2">{{ inventory|length }} 个商品</span>
+                <span class="badge bg-warning text-dark ms-1">数据来源: 京东竞品</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size:13px">
+                        <thead>
+                            <tr>
+                                <th>商品</th>
+                                <th>本店价格</th>
+                                <th>价格定位</th>
+                                <th>市场领先</th>
+                                <th>竞品样本</th>
+                                <th>建议</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in inventory %}
+                            {% set comp = item.get('competitor') %}
+                            <tr>
+                                <td class="fw-500" style="max-width:200px">
+                                    <div>{{ item.name[:30] }}{% if item.name|length > 30 %}…{% endif %}</div>
+                                    <small class="text-muted">{{ item.category }}</small>
+                                </td>
+                                <td>
+                                    {% if item.price > 0 %}
+                                    <span class="badge bg-primary">¥{{ "%.0f"|format(item.price) }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if comp and comp.price_score %}
+                                    {% if '合理' in comp.price_score or '中等' in comp.price_score %}
+                                    <span class="badge bg-success">{{ comp.price_score }}</span>
+                                    {% elif '偏低' in comp.price_score %}
+                                    <span class="badge bg-info">{{ comp.price_score }}</span>
+                                    {% elif '偏高' in comp.price_score %}
+                                    <span class="badge bg-danger">{{ comp.price_score }}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ comp.price_score or '-' }}</span>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if comp and comp.market_leader %}
+                                    <span class="text-warning">{{ comp.market_leader }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td style="max-width:220px">
+                                    {% if comp and comp.competitors %}
+                                    <small>
+                                    {% for c in comp.competitors[:2] %}
+                                        <div class="text-muted">{{ c.name[:20] }}{% if c.name|length > 20 %}…{% endif %}
+                                        {% if c.price %}<span class="text-success ms-1">¥{{ c.price }}</span>{% endif %}
+                                        {% if c.price_range %}<span class="text-success ms-1">{{ c.price_range }}</span>{% endif %}
+                                        </div>
+                                    {% endfor %}
+                                    </small>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if comp and comp.suggestion %}
+                                    <small class="text-{% if '✅' in comp.suggestion %}success{% elif '⚠️' in comp.suggestion %}warning{% else %}muted{% endif %}">
+                                        {{ comp.suggestion[:40] }}{% if comp.suggestion|length > 40 %}…{% endif %}
+                                    </small>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 类别分布饼图
+    const categoryData = {{ kpis.by_category | tojson | safe }};
+    // 健康度仪表
+    new Chart(document.getElementById('healthChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['健康', '预警', '危险', '紧急'],
+            datasets: [{
+                data: [
+                    {{ kpis.healthy_items }},
+                    {{ kpis.warning_items }},
+                    {{ kpis.danger_items }},
+                    {{ kpis.critical_items }}
+                ],
+                backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#7c3aed'],
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 1.8,
+            cutout: '60%',
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 10, padding: 4, font: { size: 11 } } },
+            }
+        }
+    });
+});
+
+function refreshData() {
+    fetch('/supply_chain/api/refresh', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => { if(d.success) location.reload(); })
+        .catch(e => alert('刷新失败: ' + e));
+}
+</script>
+{% endblock %}

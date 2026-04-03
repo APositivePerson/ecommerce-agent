@@ -1,0 +1,128 @@
+{
+  "generated_at": "2026-03-30T15:11:54.048275",
+  "shop_products_count": 6,
+  "products_analyzed": [
+    {
+      "product_id": "10000640184732",
+      "title": "维克牙膏狗狗牙膏猫咪刷牙猫狗除口臭宠物牙膏宠物洁牙用品专用",
+      "my_price": 68.0,
+      "competitors_count": 0,
+      "price_range": {
+        "min": 0,
+        "max": 0,
+        "avg": 0
+      },
+      "price_position": "偏高（高端定位）",
+      "suggestions": [
+        "价格偏高，需强化卖点或考虑降价",
+        "未找到竞品数据，建议手动搜索验证"
+      ],
+      "top_competitors": []
+    },
+    {
+      "product_id": "10000597918336",
+      "title": "N1爱宠爱猫钠基原矿猫砂10lb4.5kg",
+      "my_price": 42.0,
+      "competitors_count": 0,
+      "price_range": {
+        "min": 0,
+        "max": 0,
+        "avg": 0
+      },
+      "price_position": "偏高（高端定位）",
+      "suggestions": [
+        "价格偏高，需强化卖点或考虑降价",
+        "未找到竞品数据，建议手动搜索验证"
+      ],
+      "top_competitors": []
+    },
+    {
+      "product_id": "10000546265236",
+      "title": "日本nikoro妮可露混合猫砂低尘豆腐砂除臭猫沙茉莉花香 2.5kg",
+      "my_price": 15.0,
+      "competitors_count": 0,
+      "price_range": {
+        "min": 0,
+        "max": 0,
+        "avg": 0
+      },
+      "price_position": "偏高（高端定位）",
+      "suggestions": [
+        "价格偏高，需强化卖点或考虑降价",
+        "未找到竞品数据，建议手动搜索验证"
+      ],
+      "top_competitors": []
+    },
+    {
+      "product_id": "10000546519816",
+      "title": "皇家ASA31 美短成猫猫粮",
+      "my_price": 154.0,
+      "competitors_count": 0,
+      "price_range": {
+        "min": 0,
+        "max": 0,
+        "avg": 0
+      },
+      "price_position": "偏高（高端定位）",
+      "suggestions": [
+        "价格偏高，需强化卖点或考虑降价",
+        "未找到竞品数据，建议手动搜索验证"
+      ],
+      "top_competitors": []
+    },
+    {
+      "product_id": "10000538928235",
+      "title": "红狗化毛膏营养猫咪专用排除毛球红狗猫用营养膏 58g/120g",
+      "my_price": 21.0,
+      "competitors_count": 0,
+      "price_range": {
+        "min": 0,
+        "max": 0,
+        "avg": 0
+      },
+      "price_position": "偏高（高端定位）",
+      "suggestions": [
+        "价格偏高，需强化卖点或考虑降价",
+        "未找到竞品数据，建议手动搜索验证"
+      ],
+      "top_competitors": []
+    },
+    {
+      "product_id": "10000546629090",
+      "title": "地狱厨房鸡小胸冻干鳕鱼零食鸡胸肉猫咪狗训练奖励鸡鸭肉大满足",
+      "my_price": 9.0,
+      "competitors_count": 0,
+      "price_range": {
+        "min": 0,
+        "max": 0,
+        "avg": 0
+      },
+      "price_position": "偏高（高端定位）",
+      "suggestions": [
+        "价格偏高，需强化卖点或考虑降价",
+        "未找到竞品数据，建议手动搜索验证"
+      ],
+      "top_competitors": []
+    }
+  ],
+  "market_summary": {
+    "total_competitors_found": 0,
+    "avg_price_range": {
+      "min": 0,
+      "max": 0
+    },
+    "price_distribution": {}
+  },
+  "recommendations": [
+    {
+      "type": "pricing",
+      "priority": "high",
+      "content": "有 6 个商品价格偏高，建议强化产品差异化或调整价格"
+    },
+    {
+      "type": "general",
+      "priority": "medium",
+      "content": "持续关注竞品价格变化，每周更新一次数据"
+    }
+  ]
+}

@@ -423,6 +423,26 @@
             <a class="nav-link {{ 'active' if 'strategy' in request.endpoint }}" href="{{ url_for('strategy.strategy_page') }}">
                 <i class="bi bi-lightbulb-fill"></i> 决策助手
             </a>
+
+            <div class="menu-section">供应链管理</div>
+            <a class="nav-link {{ 'active' if 'supply_chain' in request.endpoint }}" href="{{ url_for('supply_chain.dashboard') }}">
+                <i class="bi bi-box-seam"></i> 供应链总览
+            </a>
+            <a class="nav-link {{ 'active' if 'supply_chain/inventory' in request.endpoint }}" href="{{ url_for('supply_chain.inventory_page') }}">
+                <i class="bi bi-inventory"></i> 库存分析
+            </a>
+            <a class="nav-link {{ 'active' if 'supply_chain/suppliers' in request.endpoint }}" href="{{ url_for('supply_chain.suppliers_page') }}">
+                <i class="bi bi-people"></i> 供应商管理
+            </a>
+            <a class="nav-link {{ 'active' if 'supply_chain/decisions' in request.endpoint }}" href="{{ url_for('supply_chain.decisions_page') }}">
+                <i class="bi bi-robot"></i> AI决策建议
+            </a>
+            <a class="nav-link {{ 'active' if 'supply_chain/analysis' in request.endpoint }}" href="{{ url_for('supply_chain.analysis_page') }}">
+                <i class="bi bi-graph-up"></i> 深度分析
+            </a>
+            <a class="nav-link {{ 'active' if 'supply_chain/logistics' in request.endpoint }}" href="{{ url_for('supply_chain.logistics_page') }}">
+                <i class="bi bi-truck"></i> 物流跟踪
+            </a>
         </nav>
     </div>
 
