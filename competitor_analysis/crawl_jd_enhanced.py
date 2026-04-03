@@ -91,21 +91,14 @@ class JDCrawlerEnhanced:
             await self.human_delay(100, 300)
     
     async def _ensure_jd_login(self):
-        """打开jd.com，已登录则直接继续；未登录则扫码，扫完即开始搜索，不做任何多余操作"""
-        print("  🌐 打开京东主页...")
+        """直接打开京东，等用户自己操作登录/扫码，完成后按回车继续"""
+        print("  🌐 正在打开京东，请自己在浏览器里登录/扫码...")
+        print("  （登录完成后在终端按回车继续）")
         await self.page.goto('https://www.jd.com/', timeout=30000, wait_until='domcontentloaded')
-        await asyncio.sleep(2)  # 简单等一下，让页面自然渲染
-
-        try:
-            await self.page.wait_for_selector('.nickname', timeout=5000)
-            print(f"  ✅ 已登录")
-        except Exception:
-            print("  ⚠️ 未登录，请在浏览器窗口扫码登录京东（5分钟内扫完即可）")
-            try:
-                await self.page.wait_for_selector('.nickname', timeout=300)
-                print(f"  ✅ 登录成功，直接开始搜索")
-            except Exception:
-                print("  ⚠️ 扫码超时，将以未登录状态继续（部分数据可能为空）")
+        
+        # 在线程里等待回车，避免阻塞事件循环
+        await asyncio.to_thread(input, "\n  ⏎ 登录完成后按回车继续: ")
+        print("  ✅ 收到，继续执行")
     
     async def search_and_scrape(self, keyword: str, product_id: str) -> Dict:
         """搜索并抓取数据"""
@@ -115,213 +108,144 @@ class JDCrawlerEnhanced:
             "competitors": [],
             "status": "pending"
         }
-        
+
         try:
             print(f"  🔍 搜索: {keyword[:25]}...")
-            
-            # 在当前页面使用搜索框，而不是每次goto新URL
-            for selector in ['#key', 'input#key', 'input.search-key', '[id="key"]']:
-                try:
-                    inp = self.page.locator(selector).first
-                    if await inp.is_visible(timeout=2000):
-                        await inp.click()
-                        await inp.fill(keyword)
-                        await inp.press('Enter')
-                        break
-                except Exception:
-                    continue
-            else:
-                # 兜底：直接导航到搜索页
-                encoded_kw = keyword.replace(" ", "+")
-                await self.page.goto(
-                    f'https://search.jd.com/Search?keyword={encoded_kw}&enc=utf-8&wq={encoded_kw}',
-                    wait_until='domcontentloaded', timeout=20000
-                )
-            
-            # 等待搜索结果加载
-            await self.human_delay(2000, 3500)
-            
-            # 模拟人类行为
-            await self.human_scroll()
-            await self.human_mouse_move()
-            
-            # 再次滚动加载更多
-            await self.human_scroll()
-            
-            # 等待异步加载完成（不用networkidle，用固定延迟避免触发安全检测）
-            await asyncio.sleep(2)
-            
-            # 提取数据
-            content = await self.page.content()
-            
-            # 多种方式提取价格和评价数
-            items = []
-            
-            # 方式1: 从页面结构提取（价格 + 评价数）
-            items_data = await self.page.evaluate("""
-                () => {
-                    const results = [];
-                    const items = document.querySelectorAll('.gl-item, li[data-sku]');
-                    items.forEach((item, idx) => {
-                        if (idx >= 20) return;
-                        
-                        let title = '';
-                        let price = 0;
-                        let comment_count = '';
-                        
-                        // 获取标题
-                        const titleEl = item.querySelector('.p-name em, .p-name, .goods-title');
-                        if (titleEl) title = titleEl.innerText.trim();
-                        
-                        // 获取价格
-                        const priceEl = item.querySelector('.p-price .price, .p-price i, [class*="price"]');
-                        if (priceEl) {
-                            const priceText = priceEl.innerText;
-                            const match = priceText.match(/[\\d.]+/);
-                            if (match) price = parseFloat(match[0]);
-                        }
-                        
-                        // 获取评价数（JD DOM结构: <div class="p-commit"><a>10万+条评价</a>）
-                        const commitEl = item.querySelector('.p-commit a, .p-commit');
-                        if (commitEl) {
-                            const commitText = commitEl.innerText.trim();
-                            // 匹配 "10万+条评价" / "1.2万" / "500+" 等格式
-                            const match = commitText.match(/([\\d.]+)\\s*[万万千百]?/);
-                            if (match) {
-                                let num = parseFloat(match[1]);
-                                if (commitText.includes('万')) num *= 10000;
-                                else if (commitText.includes('千')) num *= 1000;
-                                comment_count = num;
-                            }
-                        }
-                        
-                        // 备选：从整个item文本中搜索评价数
-                        if (!comment_count) {
-                            const itemText = item.innerText;
-                            const cMatch = itemText.match(/([\\d.]+)\\s*[万万千百]?\\s*(?:条)?评价/);
-                            if (cMatch) {
-                                let num = parseFloat(cMatch[1]);
-                                if (itemText.includes('万')) num *= 10000;
-                                comment_count = num;
-                            }
-                        }
-                        
-                        // 如果没找到价格，从整个item中搜索
-                        if (!price) {
-                            const itemText = item.innerText;
-                            const priceMatch = itemText.match(/¥([\\d.]+)/);
-                            if (priceMatch) price = parseFloat(priceMatch[1]);
-                        }
-                        
-                        if (title || price > 0) {
-                            results.push({ title: title || '商品', price, comment_count });
-                        }
-                    });
-                    return results;
-                }
-            """)
-            
-            if items_data and len(items_data) > 0:
-                for item in items_data:
-                    if item.get('price', 0) > 0:
-                        items.append({
-                            'title': str(item.get('title', '商品'))[:60],
-                            'price': float(item['price']),
-                            'comment_count': item.get('comment_count', ''),
-                            'source': 'playwright_js'
-                        })
-            
-            # 方式2: 如果上面没拿到，从页面源码正则提取
-            if len(items) < 3:
-                # 尝试多种价格正则
-                price_patterns = [
-                    r'<em class="price">¥([\d.]+)</em>',
-                    r'class="p-price".*?<i>¥</i><strong>([\d.]+)</strong>',
-                    r'"salePrice":"?([\d.]+)"?',
-                ]
-                
-                for pattern in price_patterns:
-                    prices = re.findall(pattern, content)
-                    for p_str in prices[:20]:
-                        try:
-                            p = float(p_str)
-                            if 1 < p < 10000:
-                                items.append({
-                                    'title': f'商品 ¥{p}',
-                                    'price': p,
-                                    'comment_count': '',
-                                    'source': 'regex'
-                                })
-                        except:
-                            pass
-                    if items:
-                        break
-            
-            # 方式3: 从嵌入的 search.jd.com API JSON 中提取（最准确，含评价数）
+
+            # 先打开 JD 搜索结果页（通过 JD 站内链接进入，降低反爬风险）
+            encoded_kw = keyword.replace(" ", "+")
+            await self.page.goto(
+                f'https://search.jd.com/Search?keyword={encoded_kw}&enc=utf-8&wq={encoded_kw}',
+                timeout=25000
+            )
+
+            # 等搜索结果出现（JD动态渲染）
             try:
-                api_json_matches = re.findall(
-                    r'search_jd_com\.(?:search_result_v2|SearchResult)\s*=\s*(\{.{0,50000})',
-                    content
+                await self.page.wait_for_selector(
+                    '#J_goodsList, .gl-item, li[data-sku], [class*="goods"]',
+                    timeout=12000
                 )
-                for match in api_json_matches[:1]:
-                    import ast
-                    try:
-                        # 截断到有效JSON末尾
-                        raw = match.strip()
-                        # 尝试找完整对象
-                        obj_str = raw
-                        data = json.loads(obj_str)
-                        products = (data.get('result', {}) or {}).get('products', [])
-                        if not products:
-                            products = data.get('wareList', []) or data.get('goodsList', []) or []
-                        for p in products[:20]:
-                            title = p.get('name', '') or p.get('title', '') or p.get('wareName', '')
-                            price = float(p.get('price', 0) or p.get('salePrice', 0) or 0)
-                            raw_count = p.get('commentCount', '') or p.get('comments', '') or ''
-                            comment_count = 0
-                            if raw_count:
-                                try:
-                                    comment_count = int(str(raw_count).replace(',', ''))
-                                except:
-                                    comment_count = 0
-                            if price > 0 and title:
-                                items.append({
-                                    'title': title[:60],
-                                    'price': price,
-                                    'comment_count': comment_count,
-                                    'source': 'api_json'
-                                })
-                    except (json.JSONDecodeError, KeyError):
-                        pass
             except Exception:
                 pass
-            
-            # 去重（按价格档位 + 标题前10字去重）
-            seen = set()
-            unique_items = []
+
+            # 等JS完全渲染
+            await asyncio.sleep(3)
+
+            # 提取数据
+            items = []
+
+            # 方法A: Playwright JS 提取
+            raw_items = await self.page.evaluate("""
+                () => {
+                    // 尝试多个可能的选择器
+                    const selectors = [
+                        '#J_goodsList li',
+                        '.gl-item',
+                        'li[data-sku]',
+                        "[class*='goods-list'] li",
+                        '.search-result li'
+                    ];
+                    let lis = [];
+                    for (const sel of selectors) {
+                        lis = document.querySelectorAll(sel);
+                        if (lis.length > 0) break;
+                    }
+                    if (lis.length === 0) {
+                        // 兜底: 找所有含价格的结构
+                        const all = document.querySelectorAll('li');
+                        lis = Array.from(all).filter(li => li.innerText.includes('¥') && li.innerText.length > 10);
+                    }
+                    return Array.from(lis).slice(0, 20).map(li => {
+                        let title = '', price = 0, comment = 0;
+                        // 标题
+                        const titleEl = li.querySelector('.p-name em, [class*="name"] em, a[title], [class*="title"]');
+                        if (titleEl) {
+                            title = titleEl.innerText.replace(/<[^>]+>/g, '').trim();
+                        }
+                        // 价格
+                        const priceEl = li.querySelector('.p-price i, [class*="price"], strong[class*="price"]');
+                        if (priceEl) {
+                            const m = priceEl.innerText.match(/[\\d.]+/);
+                            if (m) price = parseFloat(m[0]);
+                        }
+                        if (!price) {
+                            const t = li.innerText;
+                            const pm = t.match(/¥([\\d.]+)/);
+                            if (pm) price = parseFloat(pm[1]);
+                        }
+                        // 评价数
+                        const cEl = li.querySelector('.p-commit a, .p-commit');
+                        if (cEl) {
+                            const ct = cEl.innerText;
+                            const cm = ct.match(/([\\d.]+)/);
+                            if (cm) {
+                                comment = parseFloat(cm[1]);
+                                if (ct.includes('万')) comment *= 10000;
+                                else if (ct.includes('千')) comment *= 1000;
+                            }
+                        }
+                        return { title: title.substring(0, 60), price, comment };
+                    }).filter(x => x.price > 0 && x.price < 10000);
+                }
+            """)
+
+            for item in raw_items:
+                items.append({
+                    'title': item['title'],
+                    'price': float(item['price']),
+                    'comment_count': int(item.get('comment') or 0),
+                    'source': 'js_eval'
+                })
+
+            # 方法B: HTML源码正则兜底
+            if len(items) < 3:
+                html = await self.page.content()
+                # 找内嵌JSON
+                import re as _re
+                for pattern in [
+                    r'search_jd_com\.[^<]{0,100}\s*=\s*(\{.{0,20000})',
+                    r'wareList\s*=\s*(\[.{0,10000}\])',
+                    r'"goodsList":\s*(\[.{0,10000})',
+                ]:
+                    matches = _re.findall(pattern, html)
+                    for block in matches[:1]:
+                        try:
+                            block = block.strip().rstrip(';')
+                            data = json.loads(block)
+                            if isinstance(data, list):
+                                prods = data
+                            else:
+                                prods = (data.get('result') or {}).get('products') or data.get('wareList') or data.get('goodsList') or []
+                            for p in prods[:20]:
+                                title = p.get('name', '') or p.get('title', '') or p.get('wareName', '')
+                                price = float(p.get('price', 0) or p.get('salePrice', 0) or 0)
+                                cnt = int(str(p.get('commentCount', 0)).replace(',', '') or 0)
+                                if price > 0:
+                                    items.append({'title': title[:60], 'price': price, 'comment_count': cnt, 'source': 'json'})
+                        except (json.JSONDecodeError, ValueError, KeyError, TypeError):
+                            pass
+                    if len(items) >= 3:
+                        break
+
+            # 去重
+            seen, unique = set(), []
             for item in items:
-                p_key = (int(item['price'] * 10), item['title'][:10])
-                if p_key not in seen and item['price'] > 0:
-                    seen.add(p_key)
-                    # 保留评价数最大的那个
-                    existing = next((u for u in unique_items if int(u['price'] * 10) == int(item['price'] * 10)), None)
-                    if existing:
-                        if item.get('comment_count', 0) > existing.get('comment_count', 0):
-                            unique_items[unique_items.index(existing)] = item
-                    else:
-                        unique_items.append(item)
-            
-            result['competitors'] = unique_items[:15]
-            result['count'] = len(unique_items)
+                key = (int(item['price'] * 10), item['title'][:10])
+                if key not in seen and item['price'] > 0:
+                    seen.add(key)
+                    unique.append(item)
+            items = unique[:15]
+
+            result['competitors'] = items
+            result['count'] = len(items)
             result['status'] = 'success'
-            
-            print(f"    ✅ 找到 {len(unique_items)} 个商品")
-            
+            print(f"    ✅ 找到 {len(items)} 个商品")
+
         except Exception as e:
             result['status'] = 'failed'
             result['error'] = str(e)
             print(f"    ❌ 失败: {e}")
-        
+
         return result
     
     async def run(self, products: List[Dict]):
@@ -361,13 +285,7 @@ class JDCrawlerEnhanced:
 
 
 def _extract_search_keyword(title: str) -> str:
-    """
-    从微信小店商品标题中提取适合京东搜索的关键词。
-    策略：
-    1. 找品类词（品类词后紧跟数字+单位的，排除规格描述）
-    2. 品类词前取≤6字（优先提取英文/数字品牌词）
-    3. 无品类词则取前8字
-    """
+    """直接提取品类词，不要品牌前缀。"""
     CATEGORY_PATTERNS = [
         '猫粮', '狗粮', '猫砂', '猫罐头', '猫零食', '猫冻干', '猫条',
         '猫湿粮', '幼猫粮', '成猫粮', '化毛膏', '营养膏',
@@ -375,29 +293,14 @@ def _extract_search_keyword(title: str) -> str:
         '膨润土', '豆腐砂', '混合砂', '钠基砂', '矿晶砂', '冻干',
         '羊奶粉', '奶糕', '风干粮',
     ]
-
-    best_cat, best_idx = None, 999
     for cat in CATEGORY_PATTERNS:
         idx = title.find(cat)
         if idx == -1:
             continue
         after = title[idx + len(cat):idx + len(cat) + 3]
-        # 品类词后紧跟数字（规格描述如 "10lb4.5kg"），跳过
-        if re.match(r'[\d.]', after):
+        if re.match(r'[\d.]', after):  # 品类词后紧跟数字=规格，跳过
             continue
-        if idx < best_idx:
-            best_idx = idx
-            best_cat = cat
-
-    if best_cat:
-        before = title[:best_idx]
-        # 提取英文/数字词（品牌/型号），用于精确搜索
-        words = re.findall(r'[A-Za-z0-9]+', before)
-        if words:
-            kw = words[-1] + ' ' + best_cat
-        else:
-            kw = before[-6:].strip() + ' ' + best_cat
-        return kw.strip()[:22].strip()
+        return cat  # 只返回品类词，不要品牌
 
     return title[:8].strip()
 
